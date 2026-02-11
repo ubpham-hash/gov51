@@ -1,26 +1,23 @@
 ---
-title: "ps1"
-format: html
-editor: visual
+title: "Gov 51: Problem Set 1 - Commute Times in America"
+author: "Uy Pham"
+github-repo: "https://github.com/ubpham/gov51
+format: pdf
 ---
 
-## Quarto
+#2.1 Load the tidyverse and read in your ACS data.
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+\`\`\`{r}
 
-## Running Code
+library (tidyverse)
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+acs_data_2024 \<- read_csv("gov51-ps1/data/raw/acs2024.csv.gz")
 
-```{r}
-1 + 1
-```
+#2.2 Using the IPUMS documentation (online at https://usa.ipums.org), look up what each
+variable in your dataset means.
 
-You can add options to executable code like this
+#2.3 Create new variables from the raw IPUMS codes.
 
-```{r}
-#| echo: false
-2 * 2
-```
+\`\`\`{r}
 
-The `echo: false` option disables the printing of code (only output is displayed).
+mutate (female = if_else(SEX == 2, 1, 0))
