@@ -1,0 +1,298 @@
+---
+title: "ps1.qmd"
+format: html
+editor: visual
+---
+
+```{r}
+#2.1 Load the tidyverse and read in your ACS data
+library(tidyverse)
+library(knitr)
+acs <- read_csv("/Users/ubpham/gov51/gov51-ps1/data/raw/acs2024.csv")
+```
+
+```         
+```
+
+```{r}
+#2.2 Using the IPUMS documentation (online at https://usa.ipums.org), look up what each variable in your dataset means. Pay special attention to TRANTIME (What does a value of 0 mean?) and PERWT (What does this represent?)
+```
+
+```{r}
+#2.3 Create new variables from the raw IPUMS codes.
+
+acs_data_2024 <- acs_data_2024|>
+  mutate(
+      #SEX
+      female = if_else(SEX == 2, 1, 0),
+      #EDUC
+      less_than_hs = if_else (EDUC >= 0 & EDUC <=2, 1, 0),
+      hs_only = if_else (EDUC >= 3 & EDUC <=5, 1, 0),
+      some_college = if_else (EDUC >= 6 & EDUC <=7, 1, 0),
+      college_only = if_else (EDUC >= 8 & EDUC <=10, 1, 0),
+      advanced_degree = if_else (EDUC == 11, 1, 0),
+      #EMPSTAT
+      employed = if_else (EMPSTAT == 1, 1, 0),
+      unemployed = if_else (EMPSTAT == 2, 1, 0),
+      not_in_labor_force = if_else (EMPSTAT == 3, 1, 0)
+  )
+```
+
+```{r}
+#2.4 What could go wrong if you accidentally treated “N/A” codes as real zeros when calculating summary statistics.
+```
+
+```{r}
+#2.5
+# Create summary for commuters
+summary_stats <- tibble(
+  Variable = c(
+    "Age",
+    "Female",
+    "Less than High School",
+    "High School Only",
+    "Some College",
+    "College Only",
+    "Advanced Degree",
+    "Employed",
+    "Unemployed",
+    "Not in Labor Force",
+    "Commute Time (mins)",
+    "Total Income ($)"
+    ),
+  N = nrow(acs_data_2024),
+  Mean = c (
+    mean(acs_data_2024$AGE, na.rm = TRUE),
+    mean(acs_data_2024$female, na.rm = TRUE),
+    mean(acs_data_2024$less_than_hs, na.rm = TRUE),
+    mean(acs_data_2024$hs_only, na.rm = TRUE),
+    mean(acs_data_2024$some_college, na.rm = TRUE),
+    mean(acs_data_2024$college_only, na.rm = TRUE),
+    mean(acs_data_2024$advanced_degree, na.rm = TRUE),
+    mean(acs_data_2024$employed, na.rm = TRUE),
+    mean(acs_data_2024$unemployed, na.rm = TRUE),
+    mean(acs_data_2024$not_in_labor_force, na.rm = TRUE),
+    mean(acs_data_2024$TRANTIME, na.rm = TRUE),
+    mean(acs_data_2024$INCTOT, na.rm = TRUE)
+    ),
+  Std_Dev = c (
+    sd(acs_data_2024$AGE, na.rm = TRUE),
+    sd(acs_data_2024$female, na.rm = TRUE),
+    sd(acs_data_2024$less_than_hs, na.rm = TRUE),
+    sd(acs_data_2024$hs_only, na.rm = TRUE),
+    sd(acs_data_2024$some_college, na.rm = TRUE),
+    sd(acs_data_2024$college_only, na.rm = TRUE),
+    sd(acs_data_2024$advanced_degree, na.rm = TRUE),
+    sd(acs_data_2024$employed, na.rm = TRUE),
+    sd(acs_data_2024$unemployed, na.rm = TRUE),
+    sd(acs_data_2024$not_in_labor_force, na.rm = TRUE),
+    sd(acs_data_2024$TRANTIME, na.rm = TRUE),
+    sd(acs_data_2024$INCTOT, na.rm = TRUE)
+    ),
+  Min = c (
+    min(acs_data_2024$AGE, na.rm = TRUE),
+    min(acs_data_2024$female, na.rm = TRUE),
+    min(acs_data_2024$less_than_hs, na.rm = TRUE),
+    min(acs_data_2024$hs_only, na.rm = TRUE),
+    min(acs_data_2024$some_college, na.rm = TRUE),
+    min(acs_data_2024$college_only, na.rm = TRUE),
+    min(acs_data_2024$advanced_degree, na.rm = TRUE),
+    min(acs_data_2024$employed, na.rm = TRUE),
+    min(acs_data_2024$unemployed, na.rm = TRUE),
+    min(acs_data_2024$not_in_labor_force, na.rm = TRUE),
+    min(acs_data_2024$TRANTIME, na.rm = TRUE),
+    min(acs_data_2024$INCTOT, na.rm = TRUE)
+  ),
+  Max = c(
+    max(acs_data_2024$AGE, na.rm = TRUE),
+    max(acs_data_2024$female, na.rm = TRUE),
+    max(acs_data_2024$less_than_hs, na.rm = TRUE),
+    max(acs_data_2024$hs_only, na.rm = TRUE),
+    max(acs_data_2024$some_college, na.rm = TRUE),
+    max(acs_data_2024$college_only, na.rm = TRUE),
+    max(acs_data_2024$advanced_degree, na.rm = TRUE),
+    max(acs_data_2024$employed, na.rm = TRUE),
+    max(acs_data_2024$unemployed, na.rm = TRUE),
+    max(acs_data_2024$not_in_labor_force, na.rm = TRUE),
+    max(acs_data_2024$TRANTIME, na.rm = TRUE),
+    max(acs_data_2024$INCTOT, na.rm = TRUE)
+    ),
+  )
+
+# Turn your summary into a nice table
+summary_stats |>
+  kable(
+    col.names = c("Variable","N", "Mean","Std_Dev","Min","Max"),
+    digits = 2,
+    caption = "Table 1: Summary Statistics for Commute Times",
+    )
+```
+
+```{r}
+#3.1 How many people have TRANTIME == 0? What percentage is this?
+
+# Who are these people with zero commute time? (Think about what categories of people wouldn’t have a commute.)
+
+zero_travel_count <- sum(acs_data_2024$TRANTIME == 0, na.rm = TRUE)
+zero_travel_percent <- zero_travel / sum(!is.na(acs_data_2024$AGE)) * 100
+
+zero_travel_count
+zero_travel_percent
+```
+
+```{r}
+#3.2 Create a subset called commuters that includes only people who should be in your commute time analysis. Write 2–3 sentences explaining your criteria and why.
+
+commuters <- acs_data_2024 %>%
+  filter (TRANTIME > 0, employed == 1)
+```
+
+```{r}
+#3.3 Verify your subset.
+# Number of observations.
+
+people_commute <- sum(!is.na(commuters$AGE))
+people_commute
+
+# Minimum commute time.
+
+min_commute <- min(commuters$TRANTIME, na.rm = TRUE)
+min_commute
+```
+
+```{r}
+#3.4 Create a new summary statistics table for your commuters subset, using the same format as your table in Section 2. This lets you compare the full sample to your analytical sample.
+
+summary_stats <- tibble(
+  Variable = c(
+    "Age",
+    "Female",
+    "Less than High School",
+    "High School Only",
+    "Some College",
+    "College Only",
+    "Advanced Degree",
+    "Employed",
+    "Unemployed",
+    "Not in Labor Force",
+    "Commute Time (mins)",
+    "Total Income ($)"
+    ),
+  N = nrow(commuters),
+  Mean = c (
+    mean(commuters$AGE, na.rm = TRUE),
+    mean(commuters$female, na.rm = TRUE),
+    mean(commuters$less_than_hs, na.rm = TRUE),
+    mean(commuters$hs_only, na.rm = TRUE),
+    mean(commuters$some_college, na.rm = TRUE),
+    mean(commuters$college_only, na.rm = TRUE),
+    mean(commuters$advanced_degree, na.rm = TRUE),
+    mean(commuters$employed, na.rm = TRUE),
+    mean(commuters$unemployed, na.rm = TRUE),
+    mean(commuters$not_in_labor_force, na.rm = TRUE),
+    mean(commuters$TRANTIME, na.rm = TRUE),
+    mean(commuters$INCTOT, na.rm = TRUE)
+    ),
+  Std_Dev = c (
+    sd(commuters$AGE, na.rm = TRUE),
+    sd(commuters$female, na.rm = TRUE),
+    sd(commuters$less_than_hs, na.rm = TRUE),
+    sd(commuters$hs_only, na.rm = TRUE),
+    sd(commuters$some_college, na.rm = TRUE),
+    sd(commuters$college_only, na.rm = TRUE),
+    sd(commuters$advanced_degree, na.rm = TRUE),
+    sd(commuters$employed, na.rm = TRUE),
+    sd(commuters$unemployed, na.rm = TRUE),
+    sd(commuters$not_in_labor_force, na.rm = TRUE),
+    sd(commuters$TRANTIME, na.rm = TRUE),
+    sd(commuters$INCTOT, na.rm = TRUE)
+    ),
+  Min = c (
+    min(commuters$AGE, na.rm = TRUE),
+    min(commuters$female, na.rm = TRUE),
+    min(commuters$less_than_hs, na.rm = TRUE),
+    min(commuters$hs_only, na.rm = TRUE),
+    min(commuters$some_college, na.rm = TRUE),
+    min(commuters$college_only, na.rm = TRUE),
+    min(commuters$advanced_degree, na.rm = TRUE),
+    min(commuters$employed, na.rm = TRUE),
+    min(commuters$unemployed, na.rm = TRUE),
+    min(commuters$not_in_labor_force, na.rm = TRUE),
+    min(commuters$TRANTIME, na.rm = TRUE),
+    min(commuters$INCTOT, na.rm = TRUE)
+  ),
+  Max = c(
+    max(commuters$AGE, na.rm = TRUE),
+    max(commuters$female, na.rm = TRUE),
+    max(commuters$less_than_hs, na.rm = TRUE),
+    max(commuters$hs_only, na.rm = TRUE),
+    max(commuters$some_college, na.rm = TRUE),
+    max(commuters$college_only, na.rm = TRUE),
+    max(commuters$advanced_degree, na.rm = TRUE),
+    max(commuters$employed, na.rm = TRUE),
+    max(commuters$unemployed, na.rm = TRUE),
+    max(commuters$not_in_labor_force, na.rm = TRUE),
+    max(commuters$TRANTIME, na.rm = TRUE),
+    max(commuters$INCTOT, na.rm = TRUE)
+    ),
+  )
+
+# Turn your summary into a nice table
+summary_stats |>
+  kable(
+    col.names = c("Variable","N", "Mean","Std_Dev","Min","Max"),
+    digits = 2,
+    caption = "Table 2: For True Commuters — Summary Statistics for Commute Times",
+    )
+```
+
+```{r}
+ #4.1 Create a histogram of commute times using ggplot2.
+p <- ggplot (commuters,aes(x = TRANTIME))+
+  geom_histogram(
+    binwidth = 10 , # Each bin = 10 minutes
+    fill = "#4299E1", # Bar color
+    color = "white" # Bar outline
+  ) + 
+  labs(
+    title = "Distribution of Commute Times",
+    x = "Commute Time ( minutes )",
+    y = "Number of Workers "
+    ) +
+  theme_minimal ()
+```
+
+```{r}
+#4.2 In 2–3 sentences, describe what you see: Is it symmetric or skewed? Where is the center? Are there any notable features (e.g., spikes at certain values)?
+```
+
+```{r}
+# 4.3 Using your summary statistics table from Section 3, compare the mean and median commute time. Which is larger? What does this tell you about the shape of the distribution, and does it match what you see in the histogram?
+
+median_commute <- median(commuters$TRANTIME, na.rm = TRUE)
+median_commute 
+```
+
+```{r}
+#4.4 Save your histogram to output/commute histogram.png using ggsave().
+
+ggsave("gov51/gov51-ps1/output/commute_histogram.png", p,
+       width=8,height = 5)
+```
+
+```{r}
+#5.1  Calculate the weighted mean:
+
+weighted_mean <- weighted.mean(commuters$TRANTIME,commuters$PERWT)
+weighted_mean
+```
+
+```{r}
+#5.2 Compare: Is the weighted mean different from the unweighted mean you calculated earlier? By how much?
+```
+
+```{r}
+#5.3 In 2–3 sentences, explain what each number represents and why they might differ.
+```
+
+The unweighted mean is calculated by taking the sum of all the weekly commute times of all the workers IN THE ACS SAMPLE (who apply to the commute group, also known as employed and have a non-zero commute time) and dividing it by the number of workers for which this condition applies. The weighted mean is an estimation of the average weekly commute time that has been scaled to reflect the total United States population (beyond the sample), including adjustments (survey weights) for smaller groups left out of the sample. The sample is only a selection of people from the entire population of the United States, meaning that although the means are largely similar, they are still different due to the inability of the sample to accurately reflect and represent every single member of the population.

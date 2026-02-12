@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+.Rproj.user/**
+
+# Quarto / R Markdown
+*_files/
+*.html
+*.pdf
+
+# Data (optional but recommended for IPUMS)
+data/raw/*.csv
+data/raw/*.csv.gz
