@@ -1,17 +1,15 @@
-# macOS
+# --- Raw data (DO NOT COMMIT) ---
+data/raw/acs2024.csv
+
+# --- macOS ---
 .DS_Store
 
-# R / RStudio
+# --- R / RStudio ---
 .Rhistory
 .RData
 .Rproj.user/
-.Rproj.user/**
 
-# Quarto / R Markdown
+# --- Quarto / R Markdown ---
 *_files/
 *.html
 *.pdf
-
-# Data (optional but recommended for IPUMS)
-data/raw/*.csv
-data/raw/*.csv.gz
