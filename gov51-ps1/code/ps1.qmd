@@ -339,4 +339,6 @@ The weighted mean is 27.19112 minutes of commute. The unweighted mean is 27.22 i
 #5.3 In 2–3 sentences, explain what each number represents and why they might differ.
 ```
 
+The unweighted mean is calculated by taking the sum of all the commute times of all the workers IN THE ACS SAMPLE (who apply to the commute group, also known as employed and have a non-zero commute time) and dividing it by the number of workers for which this condition applies. The weighted mean is an estimation of the average commute time that has been scaled to reflect the total United States population (beyond the sample), including adjustments (survey weights) for smaller groups left out of the sample. The sample is only a selection of people from the entire population of the United States, meaning that although the means are largely similar, they are still different due to the inability of the sample to accurately reflect and represent every single member of the population.
+
 <https://github.com/ubpham-hash/gov51/tree/main>
