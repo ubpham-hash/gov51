@@ -4,6 +4,10 @@ format: html
 editor: visual
 ---
 
+Note: George said we could resubmit until Thursday, 2/12 at 11:59 PM without penalty.
+
+#1: All Git steps completed & downloaded IPUMS data.
+
 <https://github.com/ubpham-hash/gov51/tree/main>
 
 ```{r}
@@ -67,7 +71,7 @@ acs_data_2024 <- acs_data_2024|>
       unemployed = if_else (EMPSTAT == 2, 1, 0),
       not_in_labor_force = if_else (EMPSTAT == 3, 1, 0),
       #INCTOT: Remove 999999 NA Case
-      INCTOT = ifelse(INCTOT == 9999999, NA, INCTOT)
+      INCTOT = if_else(INCTOT == 9999999, NA, INCTOT)
   )
 ```
 
@@ -75,7 +79,7 @@ acs_data_2024 <- acs_data_2024|>
 #2.4 What could go wrong if you accidentally treated “N/A” codes as real zeros when calculating summary statistics.
 ```
 
-You would accidentally be treated the codes as real data points that would be calculated within the summary statistics. For example, for someone whose age is not recorded in the data set, your summary statistics would also include someone who is 999 years old, which is inaccurate because a 999 code represents N/A and not a person who is 999 years old.
+You would accidentally be treating the codes as real data points that would be calculated within the summary statistics. For example, for someone whose age is not recorded or available in the data set, your summary statistics would also include someone who is 999 years old, which is inaccurate because a 999 code represents N/A and not a person who is 999 years old. Your mean, for one, would be overestimated, as the mean is not resistant to the high outlier.
 
 ```{r}
 #2.5
@@ -159,7 +163,7 @@ summary_stats |>
   kable(
     col.names = c("Variable","N", "Mean","Std_Dev","Min","Max"),
     digits = 2,
-    caption = "Table 1: Summary Statistics for Commute Times",
+    caption = "Table 1: Summary Statistics for 2024 ACS Sample",
     )
 ```
 
@@ -172,8 +176,6 @@ While I do feel bad for the person who has to make a 195 minutes daily commute (
 ```{r}
 #3.1 How many people have TRANTIME == 0? What percentage is this?
 
-# Who are these people with zero commute time? (Think about what categories of people wouldn’t have a commute.)
-
 zero_travel_count <- sum(acs_data_2024$TRANTIME == 0, na.rm = TRUE)
 zero_travel_percent <- zero_travel_count / sum(!is.na(acs_data_2024$AGE)) * 100
 
@@ -181,7 +183,21 @@ zero_travel_count
 zero_travel_percent
 ```
 
-The people with zero commute time could include people who are unemployed (either don't have a job or still seeking employment, so they don't need to travel), students who are still in school and don't have a job, and people who are currently working from home (so they don't have to commute to work at all).
+```{r}
+# Who are these people with zero commute time? (Think about what categories of people wouldn’t have a commute.)
+
+zero_commute <- acs_data_2024 |> filter(TRANTIME == 0)
+zero_commute |> 
+  summarise(
+    employed = mean(employed, na.rm = TRUE),
+    unemployed = mean(unemployed, na.rm = TRUE),
+    not_in_labor_force = mean(not_in_labor_force, na.rm = TRUE)
+  )
+```
+
+Employed, unemployed, and not_in_labor_force are currently coded as boolean/binary (0 or 1). The closer to 1, the higher proportion of people in that specific categorical employment variable also have a 0 minute comute time category. Employed = 0.1202543. Unemployed = 0.03505. Not in labor force = 0.5781317.
+
+Therefore, the people with zero commute time typically include people who are unemployed (either don't have a job or still seeking employment, so they don't need to travel) and also include those not in the labor force (such asstudents who are still in school and don't have a job). It can also include employed people who are currently working from home (so they don't have to commute to work at all), so some of them can have zero commute time.
 
 ```{r}
 #3.2 Create a subset called commuters that includes only people who should be in your commute time analysis. Write 2–3 sentences explaining your criteria and why.
@@ -190,7 +206,7 @@ commuters <- acs_data_2024 %>%
   filter (TRANTIME > 0, employed == 1)
 ```
 
-We only want to examine commuters who actually are travelling in a typical week. People who are not employed are likely to not be commuting to work because they do not have a job; therefore, we only want people who are commuting to be in this set. People who are employed may also be working from home or virtually, so we want to only include people who have to travel and commute for work (even if they have a job).
+We only want to examine commuters who actually are travelling in a typical week. People who are not employed or not in the labor force are likely to not be commuting to work because they do not have a job; therefore, we only want people who are commuting to be in this set. People who are employed may also be working from home or virtually, so we want to only include people who have to travel and commute for work (even if they have a job).
 
 ```{r}
 #3.3 Verify your subset.
@@ -289,7 +305,7 @@ summary_stats |>
   kable(
     col.names = c("Variable","N", "Mean","Std_Dev","Min","Max"),
     digits = 2,
-    caption = "Table 2: For True Commuters — Summary Statistics for Commute Times",
+    caption = "Table 2: For True Commuters — Summary Statistics for 2024 ACS Sample",
     )
 ```
 
@@ -302,7 +318,7 @@ p <- ggplot (commuters,aes(x = TRANTIME))+
     color = "white" # Bar outline
   ) + 
   labs(
-    title = "Distribution of Commute Times",
+    title = "Distribution of Commute Times For Commuting, Employed Workers via 2024 ACS Sample",
     x = "Commute Time ( minutes )",
     y = "Number of Workers "
     ) +
@@ -343,12 +359,10 @@ weighted_mean
 #5.2 Compare: Is the weighted mean different from the unweighted mean you calculated earlier? By how much?
 ```
 
-The weighted mean is 27.19112 minutes of commute. The unweighted mean is 27.22 is minutes of commute. The difference is 0.02888 minutes.
+The weighted mean is 27.19112 minutes of commute. The unweighted mean is 27.22 is minutes of commute. The difference is 0.02888 minutes, and the unweighted mean is greater.
 
 ```{r}
 #5.3 In 2–3 sentences, explain what each number represents and why they might differ.
 ```
 
 The unweighted mean is calculated by taking the sum of all the commute times of all the workers IN THE ACS SAMPLE (who apply to the commute group, also known as employed and have a non-zero commute time) and dividing it by the number of workers for which this condition applies. The weighted mean is an estimation of the average commute time that has been scaled to reflect the total United States population (beyond the sample), including adjustments (survey weights) for smaller groups left out of the sample. The sample is only a selection of people from the entire population of the United States, meaning that although the means are largely similar, they are still different due to the inability of the sample to accurately reflect and represent every single member of the population.
-
-<https://github.com/ubpham-hash/gov51/tree/main>
