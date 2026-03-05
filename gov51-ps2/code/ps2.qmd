@@ -4,3 +4,281 @@ format: html
 editor: visual
 ---
 
+```{r}
+# 1.1.1 Load packages and data
+
+library(tidyverse)
+library(knitr)
+gay <- read_csv("/Users/ubpham/gov51/gov51-ps2/data/raw/gay.csv")
+```
+
+```{r}
+# Q1.1 How many total observations are in gay.csv? How many data rows to compare?
+nrow(gay)
+# How many unique values does study take? How many different studies in the data set
+length(unique(gay$study))
+# List all the treatment conditions in the treatment variable.
+unique (gay$treatment)
+```
+
+```{r}
+# Q1.2 Filter to Study 1, Wave 1 only. Calculate the mean of ssm (same-sex marriage attitude, scored 1–5) for each treatment group using group_by() and summarize(). Which treatment group shows the highest average support?
+
+# WITHIN GAY, filter Study 1 Wave 1, Froup By by treatment group.
+# Ssm = same-sex marraige attitude variable, which I'm taking the mean of. 
+gay %>% 
+  filter(study == 1, wave == 1) %>% 
+  group_by(treatment) %>% 
+  summarise(mean_same_sex_attitude = mean(ssm, na.rm = TRUE))
+```
+
+Recycling Script by Gay Canvasser had the highest mean at 3.13.
+
+```{r}
+# Q1.3 Still using Study 1, Wave 1, calculate the standard deviation of ssm within each treatment group. Are the standard deviations roughly similar across groups? Why is this important in a randomized experiment? (2–3 sentences)
+gay %>% 
+  filter(study == 1, wave == 1) %>% 
+  group_by(treatment) %>% 
+  summarise(sd_same_sex_attitude = sd(ssm, na.rm = TRUE))
+```
+
+Interpretation: The standard deviations appear roughly similar across the groups and within the range of 1.66 to 1.70. This means that each treatment group has roughly the same spread of sample data. This is important for randomization (when randomly selecting a sample) because in order to draw conclusions, each group needs to be roughly similar in factors beside the treatment group.
+
+```{r}
+# Q1.4 Create a bar plot of the mean ssm by treatment group (Study 1, Wave 1) using ggplot() with geom_col(). Hint: First create a summary data frame with the means, then plot it.
+
+summary_mean_ssm <- gay %>% 
+  filter(study == 1, wave == 1) %>% 
+  group_by(treatment) %>% 
+  summarise (mean_same_sex_attitude = mean(ssm, na.rm = TRUE))
+
+ggplot(summary_mean_ssm, aes(x = treatment, y = mean_same_sex_attitude)) +
+  geom_col(fill = "steelblue") +
+  labs (x = "Treatment Group", 
+        y = "Mean Same Sex Marriage Attitude", 
+        title = "Mean SSM by Treatment Group") +
+        theme(axis.text.x = element_text(angle = 30, hjust = 1, size = 7))
+```
+
+```{r}
+# Q1.5 A well-run randomized experiment should produce groups that look similar at baseline. Filter gay.csv to Study 1, Wave 1. Compare the “Same-Sex Marriage Script by Gay Canvasser” group and the “No Contact” group:
+
+# • Calculate the mean and SD of ssm for each group
+
+gay_samescript_gaycanvas <- gay %>% filter(study == 1, wave == 1, 
+                              treatment == "Same-Sex Marriage Script by Gay Canvasser")
+mean_samescript_gaycanvas <- mean(gay_samescript_gaycanvas$ssm, na.rm = TRUE)
+sd_samescript_gaycanvas <- sd(gay_samescript_gaycanvas$ssm, na.rm = TRUE)
+
+mean_samescript_gaycanvas
+sd_samescript_gaycanvas
+
+gay_nocontact <- gay %>% filter(study == 1, wave == 1, 
+                             treatment == "No Contact")
+mean_nocontact <- mean(gay_nocontact$ssm, na.rm = TRUE)
+sd_nocontact <- sd(gay_nocontact$ssm, na.rm = TRUE)
+
+mean_nocontact
+sd_nocontact
+
+# • Compute the standardized difference in means.
+# Treated = gay canvasser, Nontreated = no contact.
+
+std_mean <- (mean_samescript_gaycanvas - mean_nocontact) / sqrt( (sd_samescript_gaycanvas^2 + sd_nocontact^2)/2)
+
+std_mean
+
+# A standardized difference below 0.25 in absolute value suggests good balance. Do these groups look similar at baseline? (2–3 sentences)
+```
+
+The standard difference between the treatment group (same-sex script with a gay canvasser) and the control group (no contact group) is 0.01, which is below 0.25. Therefore, the standard difference suggest a good balance for both the means (same-sex marriage attitude) and standard deviation of the data at baseline (Wave 1 is before any contact). More broadly, since we're able to quantify the extent of the difference between the means (first compared in Q1.4), it shows that our random samples for each groups is roughly similar and not largely influenced by differences in covariates.
+
+```{r}
+# Q1.6 Now look at the outcomes. Filter to Study 1, Wave 2 only. Calculate the mean ssm for the gay canvasser group and the No Contact group. What is the difference in means (gay canvasser minus no contact)? Interpret: since the groups were balanced at baseline, what does a difference at Wave 2 suggest? (2–3 sentences)
+
+gay_samescript_gaycanvas <- gay %>% filter(study == 1, wave == 2, 
+                              treatment == "Same-Sex Marriage Script by Gay Canvasser")
+mean_samescript_gaycanvas <- mean(gay_samescript_gaycanvas$ssm, na.rm = TRUE)
+
+mean_samescript_gaycanvas
+
+gay_nocontact <- gay %>% filter(study == 1, wave == 2, 
+                             treatment == "No Contact")
+mean_nocontact <- mean(gay_nocontact$ssm, na.rm = TRUE)
+
+mean_nocontact
+
+mean_wave2_difference = mean_samescript_gaycanvas - mean_nocontact
+
+mean_wave2_difference
+```
+
+The difference in means between the treatment group (same sex script with gay canvassers) and control group (no contact) is 0.10. Since the groups were balanced at baseline (according to our calculation for the standard difference in means), this suggests that the treatment group caused a small, positive increase in same sex marriage attitudes and indicates a possible treatment effect after just one wave.
+
+```{r}
+# Q2.1  Load gayreshaped.csv and ccap2012.csv. Report the number of observations and column names for each dataset. In gayreshaped.csv, the variables therm1 through therm4 represent feeling thermometer scores (0–100) toward gay men and lesbians, measured at each survey wave.
+
+gay_r <- read_csv("/Users/ubpham/gov51/gov51-ps2/data/raw/gayreshaped.csv")
+ccap <- read_csv("/Users/ubpham/gov51/gov51-ps2/data/raw/ccap2012.csv")
+
+nrow(gay_r)
+colnames(gay_r)
+
+nrow(ccap)
+colnames(ccap)
+```
+
+```{r}
+# Q2.2 Extract the baseline feeling thermometer (therm1) for Study 1 from gayreshaped.csv. Calculate its mean, median, and standard deviation. 
+
+study1_gayr <- gay_r %>% 
+  filter(study == 1,) %>% 
+  pull(therm1)
+
+mean_study1 <- mean(study1_gayr, na.rm = TRUE)
+med_study1 <- median(study1_gayr, na.rm = TRUE)
+sd_study1 <- sd(study1_gayr, na.rm = TRUE)
+
+# Then do the same for gaytherm from ccap2012.csv (remove NAs). 
+
+ccap_gaytherm <- ccap %>% 
+  pull(gaytherm)
+
+mean_ccap <- mean(ccap_gaytherm, na.rm = TRUE)
+med_ccap  <- median(ccap_gaytherm, na.rm = TRUE)
+sd_ccap   <- sd(ccap_gaytherm, na.rm = TRUE)
+
+# Report both sets of statistics side by side. What do you notice? (1–2 sentences)
+
+summary_stats <- tibble(
+  Variable = c(
+    "Gay Study 1",
+    "CCAP 2012"
+  ),
+  Mean = c(
+    mean_study1,
+    mean_ccap
+  ),
+  Median = c(
+    med_study1,
+    med_ccap
+  ),
+  StdDev = c(
+    sd_study1,
+    sd_ccap
+  )
+)
+summary_stats |>
+  kable(
+    col.names = c("Variable","Mean","Median","Std_Dev"),
+    digits = 3,
+    caption = "Table 1: Summary Statistics for Study 1 via Gay and GayTherm via CCAP 2012",
+    )
+```
+
+Overall, the statistics between Study 1 of Gay Reshaped and CCAP 2012 appear to be very similar. Between the Lacour baseline and the CCAP 2012 (which is actual data), the mean same sex marriage attitude differs by 0.4, the medians by 2, and standard_deviations by 0.8.
+
+```{r}
+# Q2.3  Create side-by-side histograms comparing the LaCour Study 1 baseline (therm1) and the CCAP data (gaytherm). Use the same bin breaks for both: breaks = seq(0, 100, by = 5). 
+# Hint: Combine the two datasets into one data frame with a column indicating the source, then use ggplot() with facet_wrap().
+
+combined <- bind_rows (study1_gayr, ccap_gaytherm)
+
+# Do these look like they came from different populations? (2–3 sentences)
+```
+
+```{r}
+# Q2.4 For both the Study 1 and Study 2 control groups (“No Contact”), calculate:
+  # (a) The correlation between therm1 and therm2 (use cor() with use = "complete.obs")
+  # (b) The standard deviation of the within-person change (therm2 - therm1)
+
+# Present your results side by side. A re-test correlation of 0.95–0.97 is typical for real feeling thermometer data. Which study shows a more plausible pattern, and why? (3–4 sentences)
+```
+
+```{r}
+# Q2.5 Create two scatter plots side by side:
+# (a) Study 1 control group: therm1 (x-axis) vs therm2 (y-axis), with a 45-degree line
+# (b) Study 2 control group: therm1 (x-axis) vs therm2 (y-axis), with a 45-degree line
+
+# Describe the differences. Which looks more like real longitudinal data, and why? (3–4 sentences)
+```
+
+```{r}
+# Q2.6 You’ve now found three irregularities:
+# 1. The baseline distributions match an existing national survey
+# 2. The re-test correlations are implausibly high (Study 1)
+# 3. The within-person changes are implausibly small (Study 1)
+# In 4–5 sentences, explain why these three findings together suggest the data were fabricated rather than collected in a real experiment. Use specific numbers from your analysis. Why would a fabricator produce data with these properties?
+```
+
+```{r}
+# Q3.1 Filter gayreshaped.csv to Study 2. How many observations? Calculate the mean and SD of therm1 (baseline) for the treatment group and the control group separately.
+```
+
+```{r}
+# Q3.2 Create side-by-side histograms of Study 1 baseline (therm1) and Study 2 baseline (therm1), using the same bins as before. How do they compare visually? (2–3 sentences)
+```
+
+```{r}
+# Q3.3 Filter gayreshaped.csv to Study 2, keeping only the “Same-Sex Marriage Script by Gay Canvasser” and “No Contact” groups. Check balance at baseline: calculate the mean and SD of therm1 for each group and the standardized difference in means (same formula as Q1.5). Do the groups look balanced? (1–2 sentences)
+```
+
+```{r}
+# Q3.4 Now compare outcomes. Calculate the mean therm2 (post-conversation) for each group. What is the difference in post-period means (gay canvasser minus no contact)?
+```
+
+```{r}
+# Q3.5 Calculate the standard error of the difference in post-period means from Q3.4.2 is the variance of therm2 and 𝑛 is the sample size for each group. Then construct a 95% confidence interval: ( ̄𝑥1 − ̄𝑥2) ± 1.96 × 𝑆𝐸Does the CI include zero? What does this tell you about whether the groups differ after the conversations?
+```
+
+```{r}
+# Q3.6 For the Study 2 control group, calculate the correlation between therm1 and each subsequent wave: therm2, therm3, and therm4. Use cor() with use = "complete.obs". Do the correlations decay over time (i.e., do more distant waves correlate less with baseline)? Wha does this pattern tell you about the stability of real survey measurements? (2–3 sentences)
+```
+
+```{r}
+# Q3.7 You’ve now analyzed fabricated data (Study 1), caught the fraud, and examined more realistic data (Study 2). In 5–6 sentences, discuss:
+# • What makes Study 2’s data different from Study 1’s data? Be specific about which statistics differ and by how much.
+# • Why is it important that real treatment effects are smaller and messier than fabricated ones?
+# • What role did simple measurement tools (mean, SD, histograms, correlations) play in detecting the fraud?
+```
+
+```{r}
+# Q4.1 For the Study 1 control group, fit a linear regression predicting therm2 from therm1:
+# therm2𝑖 = 𝛽0 + 𝛽1 × therm1𝑖 + 𝜖𝑖
+# Store the result as fit_s1 and display the summary. Report the slope (𝛽̂ )1 the R-squared, and the residual standard error
+# Use lm(therm2 ~ therm1, data = ...) and summary().
+```
+
+```{r}
+# Q4.2 Repeat Q4.1 for the Study 2 control group. Store as fit_s2. Report the same three quantities: slope, R-squared, and residual standard error.
+# Compare the two models. In fabricated data, we’d expect 𝛽̂1 ≈ 1 and 𝑅2 ≈ 1 because the “followup” data is just a copy of the baseline with tiny noise added. In real data, we’d expect regression to the mean: 𝛽̂ < 1 and lower R^2. Which pattern do you see? (3-4 sentences)
+```
+
+```{r}
+# Q4.3 Now use regression to compare the two groups in Study 2. Create a binary variable treated that equals 1 for the “Same-Sex Marriage Script by Gay Canvasser” group and 0 for the “No Contact” group. 
+
+# Then fit: therm2𝑖 = 𝛽0 + 𝛽1 × treated𝑖 + 𝜖𝑖
+# Report 𝛽̂1, its standard error, t-statistic, and p-value. Compare 𝛽̂1to the difference in means you calculated in Q3.4 — what do you notice? What does 𝛽̂0estimate? Is the difference between groups statistically significant at 𝛼 = 0.05?
+
+# Note: Filter to only the gay canvasser and no contact groups before running the regression
+
+```
+
+```{r}
+# Q4.4 Add therm1 as a control variable:
+# therm2𝑖 = 𝛽0 + 𝛽1 × treated𝑖 + 𝛽2 × therm1𝑖 + 𝜖𝑖
+# Report the coefficient on treated, its standard error, t-statistic, and p-value. Compare this to your results from Q4.3:
+# (a) Did the estimate of 𝛽̂1 change much?
+# (b) Did the standard error change? In which direction?
+# (c) Why does controlling for baseline attitudes improve precision? (2–3 sentences)
+```
+
+```{r}
+# Q4.5 Compare the R-squared values from Q4.3 and Q.4. Why does adding therm1increase the R-squared so dramatically? What does this tell you about how much of the variation in follow-up attitudes is explained by where people started versus the treatment?
+
+# Finally, use predict() to generate predicted values from your Q4.4 model for two hypothetical respondents:
+# • Person A: treated = 1, therm1 = 50 (moderate baseline)
+# • Person B: treated = 0, therm1 = 50 (same baseline, no treatment)
+
+# What is the predicted difference in their Wave 2 attitudes?
+```
