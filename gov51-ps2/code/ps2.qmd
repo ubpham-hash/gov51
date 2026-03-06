@@ -4,6 +4,8 @@ format: html
 editor: visual
 ---
 
+<https://github.com/ubpham-hash/gov51>
+
 ```{r}
 # 1.1.1 Load packages and data
 
@@ -452,11 +454,25 @@ The correlations do not decay over time; the correlations do fluctuate slightly 
 # • What role did simple measurement tools (mean, SD, histograms, correlations) play in detecting the fraud?
 ```
 
-Scatterplot
+1.  Study 2's data is different then Study 1's data in several ways. First of all, in the scatterplot, Study 1 had an extremely strong correlation (low residuals) that clustered closely to the 45 degree line. Study 2 also followed the strong positive linear relationship of the 45 degree line, but the data points were more scattered and had higher residuals from the true 45 degree line.
 
-Correlation
+    Such a strong correlation in Study 1 would signal falsified data since it does not reflect the true variability and "noise" that would come with sampling (the relationship between therm1 thermometer score and therm2 thermometer score would not be as strongly consistent with a consistent trend).
 
-Standard Deviation
+    In Q2.4, Study 1's (a control group) correlation of 0.998 (between initial therm1 and retest therm2) falls outside the re-test correlation typical range of 0.95-0.97. On the other hand, Study 2 has a correlation of 0.97 between initial therm 1 and retest therm 2, which falls within the typical re-test correlation typical range. Such a strong correlation for Study 2 indicates that respondents in this sample would have responded with the same thermometer score two times in a row, which is extremely unlikely to be such strongly consistent due to variability between responses.
+
+    Such precision and strong correlation therefore suggests the data was not authentically generated, since it does not reflect the true variability that comes with sampling real people and slightly varying thermometer responses between the initial therm1 and follow-up therm2. Instead, the correlation relating initial therm1 and retest therm 2 should fall within the typical re-test correlation range with a slightly weaker relationship between initial and subsequent thermometer score relationships.
+
+    The standard deviation was extremely small for Study 1 (1.99), and the standard deviation was larger for Study 2 (6.60). A larger standard deviation reflects a larger spread for the data in that distribution, which better reflects the real world nature of randomness and variation of sample data and sample people inconsistency.
+
+2.  It is important that the real treatment effects are smaller and messier than fabricated ones because in the real world, people are inconsistent, there is variation and randomness both within selecting a sample and people's inconsistency.
+
+3.  All are simple statistical tools (such as means, standard deviations, histograms, correlations) that helped us catch fraud at a graduate level and revoked his tenure offer.
+
+    The standard deviation was extremely small for Study 1 (1.99), and the standard deviation was larger for Study 2 (6.60). A larger standard deviation reflects a larger spread for the data in that distribution, which better reflects the real world nature of randomness and variation of sample data and sample people inconsistency.
+
+    Histograms showed us that Study 1's data distribution was extremely similar to an actual existing survey. In Q2.3, we established that the baseline distributions for the reshaped gay distribution and the CCAP existing national survey displayed strong similarities. There are peaks in both graphs near the feeling thermometer of 0, 50, and 100. In both histograms, the clustered data is higher at 100 score compared to 0 score, as well as the peak before 50 score being larger than the peak after 50 score. Overall, the growth of respondent counts also gradually increases between 0 to 50 score and then 50 to 100 score in both histograms. Therefore, the similar baseline distributions suggest that the data was not randomly and independently sampled in the reshaped gay distribution; instead the data was likely taken from an existing national survey data. Instead, the baseline distribution between the existing national survey and reshaped gay distribution should share weaker similarities since they took different samples.
+
+    Regarding correlation, Study 1's (a control group) correlation of 0.998 (between initial therm1 and retest therm2) falls outside the re-test correlation typical range of 0.95-0.97. On the other hand, Study 2 has a correlation of 0.97 between initial therm 1 and retest therm 2, which falls within the typical re-test correlation typical range. Such a strong correlation for Study 2 indicates that respondents in this sample would have responded with the same thermometer score two times in a row, which is extremely unlikely to be such strongly consistent due to variability between responses. Such precision and strong correlation therefore suggests the data was not authentically generated, since it does not reflect the true variability that comes with sampling real people and slightly varying thermometer responses between the initial therm1 and follow-up therm2. Instead, the correlation relating initial therm1 and retest therm 2 should fall within the typical re-test correlation range with a slightly weaker relationship between initial and subsequent thermometer score relationships.
 
 ```{r}
 # Q4.1 For the Study 1 control group, fit a linear regression predicting therm2 from therm1:
