@@ -29,10 +29,10 @@ unique (gay$treatment)
 gay %>% 
   filter(study == 1, wave == 1) %>% 
   group_by(treatment) %>% 
-  summarise(mean_same_sex_attitude = mean(ssm, na.rm = TRUE))
+  summarise(mean_same_sex_attitude = mean(ssm, na.rm = TRUE), n())
 ```
 
-Recycling Script by Gay Canvasser had the highest mean at 3.13.
+Recycling Script by Gay Canvasser had the highest mean at 3.13. In addition, all means are close to 3 at the baseline, indicating that the groups are roughly similar which reflects random assignment.
 
 ```{r}
 # Q1.3 Still using Study 1, Wave 1, calculate the standard deviation of ssm within each treatment group. Are the standard deviations roughly similar across groups? Why is this important in a randomized experiment? (2–3 sentences)
@@ -180,47 +180,200 @@ Overall, the statistics between Study 1 of Gay Reshaped and CCAP 2012 appear to 
 
 ```{r}
 # Q2.3  Create side-by-side histograms comparing the LaCour Study 1 baseline (therm1) and the CCAP data (gaytherm). Use the same bin breaks for both: breaks = seq(0, 100, by = 5). 
-# Hint: Combine the two datasets into one data frame with a column indicating the source, then use ggplot() with facet_wrap().
 
-combined <- bind_rows (study1_gayr, ccap_gaytherm)
+study1 <- gay_r %>%
+  filter(study == 1) %>%
+  select(category = therm1) %>%
+  mutate(source = "Study 1")
+
+ccap_data <- ccap %>%
+  select(category = gaytherm) %>%
+  mutate(source = "CCAP")
+
+combined <- bind_rows(study1, ccap_data) %>%
+  filter(!is.na(category))
+
+ggplot(combined, aes(x = category)) +
+  geom_histogram(breaks = seq(0, 100, by = 5)) +
+  facet_wrap(~source, scales = "free_y") +
+  labs(
+    x = "Same Sex Attitude Thermometer Measure", 
+    y = "Respondent Count",
+    title = "Same-Sex Feeling Thermometers from Reshaped & CCAP"
+  )
 
 # Do these look like they came from different populations? (2–3 sentences)
 ```
 
+No, the data does not appear to be from different populations; instead, the shapes of both distributions as shown by the histogram appear extremely similar. There are peaks in both graphs near the feeling thermometer of 0, 50, and 100. In both histograms, the clustered data is higher at 100 score compared to 0 score, as well as the peak before 50 score being larger than the peak after 50 score. Overall, the growth of respondent counts also gradually increases between 0 to 50 score and then 50 to 100 score in both histograms.
+
 ```{r}
 # Q2.4 For both the Study 1 and Study 2 control groups (“No Contact”), calculate:
+
   # (a) The correlation between therm1 and therm2 (use cor() with use = "complete.obs")
+
+therm1_study1 <- gay_r %>% 
+  filter(study == 1, treatment == "No Contact") %>% 
+  pull(therm1)
+
+therm2_study1 <- gay_r %>% 
+  filter(study == 1, treatment == "No Contact") %>% 
+  pull(therm2)
+
+cor_study1 = cor(therm1_study1, therm2_study1, use = "complete.obs")
+cor_study1
+
+therm1_study2 <- gay_r %>% 
+  filter(study == 2, treatment == "No Contact") %>% 
+  pull(therm1)
+
+therm2_study2 <- gay_r %>% 
+  filter(study == 2, treatment == "No Contact") %>% 
+  pull(therm2)
+
+cor_study2 = cor(therm1_study2, therm2_study2, use = "complete.obs")
+cor_study2
+
   # (b) The standard deviation of the within-person change (therm2 - therm1)
+
+sd_study1 = sd(therm2_study1-therm1_study1, na.rm=TRUE)
+sd_study1
+sd_study2 = sd(therm2_study2-therm1_study2, na.rm=TRUE)
+sd_study2
 
 # Present your results side by side. A re-test correlation of 0.95–0.97 is typical for real feeling thermometer data. Which study shows a more plausible pattern, and why? (3–4 sentences)
 ```
 
+Study 2 (a treatment group) has a re-test correlation of 0.97 (between therm 1 intiial test and therm 2 follow up test) , which mean the correlation falls within a typical range for a real feeling thermometer data. However, Study 1's (a control group) correlation of 0.998 (between therm 1 intiial test and therm 2 follow up test) falls outside the re-test correlation typical range. In fact, Study 1 has a correlation stronger (greater than) the typical correlation range. For Study 1, even for a control group, such a strong correlation means that respondents were giving the same answers in both rounds therm1 and round therm2, which is unlikely due to other randomization and variation.
+
 ```{r}
 # Q2.5 Create two scatter plots side by side:
 # (a) Study 1 control group: therm1 (x-axis) vs therm2 (y-axis), with a 45-degree line
+
+gay_r %>%
+  filter(study == 1, treatment == "No Contact") %>%
+  ggplot(aes(therm1, therm2)) +
+  geom_point(alpha = 0.3, na.rm = TRUE) +
+  geom_abline(slope = 1, intercept = 0) + 
+  labs(
+    title = "Study 1 — The Control Group Baseline and Follow-Up",
+    x = "Baseline Round 1 Thermometer (therm1)",
+    y = "Follow-Up Round 2 Thermometer (therm2)"
+  )
+  
 # (b) Study 2 control group: therm1 (x-axis) vs therm2 (y-axis), with a 45-degree line
+  
+gay_r %>%
+  filter(study == 2, treatment == "No Contact") %>%
+  ggplot(aes(therm1, therm2)) +
+  geom_point(alpha = 0.3, na.rm = TRUE) +
+  geom_abline(slope = 1, intercept = 0) +
+  labs(
+    title = "Study 2 — A Treatment Group Baseline and Follow-Up",
+    x = "Baseline Round 1 Thermometer (therm1)",
+    y = "Follow-Up Round 2Thermometer (therm2)"
+  )
 
 # Describe the differences. Which looks more like real longitudinal data, and why? (3–4 sentences)
 ```
+
+Study 2 looks more like real longitudinal data. Both have clusters on the round 1 thermometer score of 50 and 100 (on the x-axis), meaning there are clusters of data points heaping on the corresponding score. While both distributions generally follow the trend of a positive linear relationship between the thermometer score of the baseline round and follow-up round, in Study 1, the data clusters strongly directly on the 45 degree line (extremely low residuals). On the other hand, in Study 2, the data follows the general trend of a positive linear relationship but the data has a higher spread from the 45 degree line as well as greater residuals from the 45 degree line. Therefore, Study 2 looks more like real longitudinal by reflecting the variability within data and scattering around the 45 degree line; true data is not as strongly correlated as displayed by Study 1 due to variability and randomization within sampling.
 
 ```{r}
 # Q2.6 You’ve now found three irregularities:
 # 1. The baseline distributions match an existing national survey
 # 2. The re-test correlations are implausibly high (Study 1)
 # 3. The within-person changes are implausibly small (Study 1)
+
 # In 4–5 sentences, explain why these three findings together suggest the data were fabricated rather than collected in a real experiment. Use specific numbers from your analysis. Why would a fabricator produce data with these properties?
 ```
 
+In Q2.3, we established that the baseline distributions for the reshaped gay distribution and the CCAP existing national survey displayed strong similarities. There are peaks in both graphs near the feeling thermometer of 0, 50, and 100. In both histograms, the clustered data is higher at 100 score compared to 0 score, as well as the peak before 50 score being larger than the peak after 50 score. Overall, the growth of respondent counts also gradually increases between 0 to 50 score and then 50 to 100 score in both histograms.
+
+Therefore, the similar baseline distributions suggest that the data was not randomly and independently sampled in the reshaped gay distribution; instead the data was likely taken from an existing national survey data.
+
+Instead, the baseline distribution between the existing national survey and reshaped gay distribution should share weaker similarities since they took different samples.
+
+In Q2.4, Study 1's (a control group) correlation of 0.998 (between initial therm1 and retest therm2) falls outside the re-test correlation typical range of 0.95-0.97. On the other hand, Study 2 has a correlation of 0.97 between initial therm 1 and retest therm 2, which falls within the typical re-test correlation typical range. Such a strong correlation for Study 2 indicates that respondents in this sample would have responded with the same thermometer score two times in a row, which is extremely unlikely to be such strongly consistent due to variability between responses.
+
+Such precision and strong correlation therefore suggests the data was not authentically generated, since it does not reflect the true variability that comes with sampling real people and slightly varying thermometer responses between the initial therm1 and follow-up therm2.
+
+Instead, the correlation relating initial therm1 and retest therm 2 should fall within the typical re-test correlation range with a slightly weaker relationship between initial and subsequent thermometer score relationships.
+
+In Q2.5, Study 1 had an extremely strong correlation (low residuals) that clustered closely to the 45 degree line. Study 2 also followed the strong positive linear relationship of the 45 degree line, but the data points were more scattered and had higher residuals from the true 45 degree line.
+
+Such a strong correlation in Study 1 would signal falsified data since it does not reflect the true variability and "noise" that would come with sampling (the relationship between therm1 thermometer score and therm2 thermometer score would not be as strongly consistent with a consistent trend).
+
+Instead, the data points should be more scattered and less clustered to the 45 degree line. The distribution can still follow the general positive linear relationship trend, but showing a less strong correlation.
+
+A fabricator would produce data with these properties, as reflected in Study 1, because they would want to achieve certain "perfect" conclusions without having to account for variability that occurs within sampling.
+
 ```{r}
 # Q3.1 Filter gayreshaped.csv to Study 2. How many observations? Calculate the mean and SD of therm1 (baseline) for the treatment group and the control group separately.
+
+study2 <- gay_r %>% filter(study == 2)
+
+study2 %>% 
+   summarise (n=n())
+
+study2 %>% 
+  group_by(treatment) %>% 
+  summarise(
+    n=n(),
+    mean_therm1 = mean(therm1, na.rm = TRUE),
+    sd_therm1 = sd(therm1, na.rm = TRUE),
+    mean_therm2 = mean(therm2, na.rm = TRUE),
+    sd_therm2 = sd(therm2, na.rm = TRUE))
 ```
 
 ```{r}
 # Q3.2 Create side-by-side histograms of Study 1 baseline (therm1) and Study 2 baseline (therm1), using the same bins as before. How do they compare visually? (2–3 sentences)
+
+study1 <- gay_r %>%
+  filter(study == 1)
+
+study2 <- gay_r %>%
+  filter(study == 2) 
+
+combined <- bind_rows(
+  tibble(source = "Study 1 Baseline", therm = study1$therm1),
+  tibble(source = "Study 2 Baseline", therm = study2$therm1)
+) %>% filter (!is.na(therm))
+
+ggplot(combined, aes(x = therm))+
+  geom_histogram(breaks = seq(0, 100, by = 5)) +
+  facet_wrap(~source, scales = "free_y") +
+  labs(
+    x = "Same Sex Attitude Thermometer Measure", 
+    y = "Respondent Count",
+    title = "Feeling Thermometers Baseline from Treatment & Control"
+  )
 ```
+
+Both the baseline distribution of Study 1 (control) and Study 2 (treatment) are roughly similar in distribution shape and peaks. The shapes are broadly consistent between both baseline groups, indicating that the sampling groups for both the treatment and control group are roughly similar even after randomization. Sample 1 has a larger sample size. However, Study 2 also shows meaningful variation.
 
 ```{r}
 # Q3.3 Filter gayreshaped.csv to Study 2, keeping only the “Same-Sex Marriage Script by Gay Canvasser” and “No Contact” groups. Check balance at baseline: calculate the mean and SD of therm1 for each group and the standardized difference in means (same formula as Q1.5). Do the groups look balanced? (1–2 sentences)
+
+study2_treat <- study2 %>%
+  filter(treatment == "Same-Sex Marriage Script by Gay Canvasser")
+
+mean_samescript_gaycanvas <- mean(study2_treat$therm1, na.rm = TRUE)
+mean_samescript_gaycanvas
+sd_samescript_gaycanvas <- sd(study2_treat$therm1, na.rm = TRUE)
+sd_samescript_gaycanvas
+
+study2_control <- study2 %>%
+  filter(treatment == "No Contact")
+
+mean_nocontact <- mean(study2_control$therm1, na.rm = TRUE)
+sd_nocontact <- sd(study2_control$therm1, na.rm = TRUE)
+mean_nocontact
+sd_nocontact
+
+std_mean <- (mean_samescript_gaycanvas - mean_nocontact) / sqrt( (sd_samescript_gaycanvas^2 + sd_nocontact^2)/2)
+
+std_mean
 ```
 
 ```{r}
