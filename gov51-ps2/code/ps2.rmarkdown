@@ -521,7 +521,7 @@ The beta 1 hat is 3.57. It is the same as the difference of the treatment therm2
 
 The standard error is 1.24.
 
-Beta zero is 57.63.
+Beta zero is 57.63. This represent the y-intercept. In other words, when the control (control group, beta hat 1) thermometer follow-up score is 0 points, the treatment thermometer follow-up score is 57.63 points.
 
 The t-score is 2.87.
 
@@ -530,11 +530,23 @@ The p-value is 0.004. Since the p-value of 0.004 is less than alpha of 0.05, the
 ```{r}
 # Q4.4 Add therm1 as a control variable:
 # therm2𝑖 = 𝛽0 + 𝛽1 × treated𝑖 + 𝛽2 × therm1𝑖 + 𝜖𝑖
-# Report the coefficient on treated, its standard error, t-statistic, and p-value. Compare this to your results from Q4.3:
+
+fit2 <- lm(therm2 ~ treated + therm1, data = d2)
+summary(fit2)
+
+# Report the coefficient on treated, its standard error, t-statistic, and p-value. 
+
+# Compare this to your results from Q4.3:
 # (a) Did the estimate of 𝛽̂1 change much?
 # (b) Did the standard error change? In which direction?
 # (c) Why does controlling for baseline attitudes improve precision? (2–3 sentences)
 ```
+
+The new coefficient on treated is 2.46. The previous coefficient on treated was 3.57. This is a moderate decrease.
+
+The standard error is now 0.34. The previous standard error was 1.24. This is approximately a 73% decrease, so this is a significant decrease change.
+
+Adding the therm1 control variable (baseline attitude thermometer score) explains more of the variation between follow-up attitude thermometer scores between treatment and control group. Therefore, controlling for the baseline attitudes improves precision.
 
 ```{r}
 # Q4.5 Compare the R-squared values from Q4.3 and Q.4. Why does adding therm1increase the R-squared so dramatically? What does this tell you about how much of the variation in follow-up attitudes is explained by where people started versus the treatment?
@@ -543,6 +555,24 @@ The p-value is 0.004. Since the p-value of 0.004 is less than alpha of 0.05, the
 # • Person A: treated = 1, therm1 = 50 (moderate baseline)
 # • Person B: treated = 0, therm1 = 50 (same baseline, no treatment)
 
+person_a = predict(fit2, newdata = data.frame (treated = 1, therm1 = 50))
+
+person_b = predict(fit2, newdata = data.frame (treated = 0, therm1 = 50))
+
+person_a
+person_b
+
+pred_difference = person_a-person_b
+pred_difference
+
 # What is the predicted difference in their Wave 2 attitudes?
 ```
+
+Q4.3 R squared was 0.0039.
+
+Q4.4 R squared is 0.925.
+
+The R-squared increased dramatically, meaning the linear model in 4.4 accounts for 92.5% of the variation in attitude thermometer scores in the treatment follow-up, compared to only 3.9% of the variation accounted for under the 4.3 linear model. This tells me that nearly 90% of the variation (a large significant percentage of the total variation) is accounted for by people's baseline attitude temperature scores.
+
+The predicted difference is 2.46. This is the exact same as our treatment coefficient of 2.46 in Q4.4 using the linear model in 4.4. The model predicts that the treatment led to a 2.46 point increase in the follow-up attitude thermometer score.
 
