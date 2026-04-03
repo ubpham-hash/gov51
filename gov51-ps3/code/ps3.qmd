@@ -94,7 +94,7 @@ ggplot(recid_by_priors, aes(x = priors_cat, y = recid_rate)) +
   theme_minimal()
 ```
 
-The pattern that I see is that as the number of prior offenses increases, the recidivism rate appears to increase as well. Those with 0 prior offenses have the lowest recidivism rate, while those with 11+ prior offenses have the highest recidivism rate, with a consistent increase in recidivism rate as the prior offenses category increase.
+The pattern that I see is a positive relationship that as the number of prior offenses increases, the recidivism rate appears to increase as well. Those with 0 prior offenses have the lowest recidivism rate, while those with 11+ prior offenses have the highest recidivism rate, with a consistent increase in recidivism rate as the prior offenses category increase.
 
 ```{r}
 #2.1 Set your seed to 51 for reproducibility. Split the data into a training set (80 ) and a test set (20%)
@@ -192,9 +192,9 @@ mean(rmse_cv)
 
 The 5-fold CV estimate of RMSE is 0.462, compared to the single-split out-of-sample RMSE from 2.3 which was also 0.462.
 
-Cross-validation is more reliable than a single train/test split because it varies which parts of the sample will be used to train or test the data. It averages the model's performance over/across different test folds, unlike the single train/split where the results are determined based on one random split (rather than different, random variations of splits).
+Cross-validation is more reliable than a single train/test split because it varies which parts of the sample will be used to train or test the data. It averages the model's performance over/across different test folds, unlike the single train/split where the results are determined based on one random split and its noise (rather than different, random variations of splits).
 
-The penalty parameter needs to balance between bias and variance. Cross-validation estimates out-of-sample predictive performance of the model. Cross-validation ensures the penalty is chosen across separate, random variations of allocated train/test data to ensure the model's performance to multiple variations of unseen test data. Therefore, the penalty parameter lambda will be chosen based on what can be best generalized to new/unseen/test data.
+The penalty parameter needs to balance between bias and variance. Cross-validation estimates out-of-sample predictive performance of the model for each potential lambda/penalty. Cross-validation ensures the penalty is chosen across separate, random variations of allocated train/test data to ensure the model's performance to multiple variations of unseen test data. Therefore, the penalty parameter lambda will be chosen based on what can be best generalized to new/unseen/test data.
 
 ```{r}
 #3.1 The formula below creates all pairwise interactions plus squared terms for the continuous variables. This expands our feature set from 16 to about 141 predictors.
@@ -245,7 +245,7 @@ rmse_test_full - rmse_train_full
 
 The gap between in-sample and out-of-sample gap is 0.0405 with 141 predictors, compared to 0.0016 with 16 predictor OLS (2.3). In sample RMSE was 0.4606 for 16-predictors, compared to 0.448. Out of sample RMSE was 0.4890 for 16-predictors, compared to 0.4622.
 
-Although the in-sample RMSE was less for 141 predictors, the out-of sample RMSE was greater for 141 predictors. Furthermore, the in-sample/out-of-sample gap increased by about 0.04. This is because the new OLS model with 141 predictors is overfitting (stronger for and closely fitting to training data noise, weaker in predicting for new/test data where same training data noise does not exist).
+Although the in-sample RMSE was less for 141 predictors, the out-of sample RMSE was greater for 141 predictors. Furthermore, the in-sample/out-of-sample gap increased by about 0.04. This is because the new OLS model with 141 predictors is overfitting (stronger for and closely fitting to training data noise, weaker in predicting for new/test data where same training data noise does not exist). High variance, low bias.
 
 ```{r}
 #3.3 In 2–3 sentences, explain why adding 180 interaction terms made the model’s in-sample fit better but its out-of-sample predictions worse. What is this phenomenon called?
@@ -413,7 +413,7 @@ This tables shows that models that minimize training error will end up generaliz
 
 Under Baker, experts in a courtroom trial would argue over which predictor variables to consider; whoever wins in the eyes of a court is whoever is able to tell the better story. However, LASSO reduces "subjective discretion" because it systematically and mathematically via the algorithm with the penalty lambda (shrinks and selects, weak coefficients zeroed out exactly with absolute values) decides which variables and interactions to keep, backed by data beyond just human judgement; still the remaining variables make sense for human interpretation but do not rely on humans solely alone for subjectivity. It could determine which peer firms to keep and which to drop as related to stock returns based on a data-driven process.
 
-The OLS approach is not always back by data and algorithm that decides which variables to keep, which variables to minimize, or even variables to completely reduce to zero. Therefore, the opportunity for selectivity of variables within the traditional OLS approach gives the most room for analyst to manipulate and choose whichever variables to include the OLS model, yielding the predictions that are most favorable for their desired goal.
+The OLS approach is not backed by data and algorithm that decides which variables to keep, which variables to minimize, or even variables to completely reduce to zero. Therefore, the opportunity for manual/human selectivity (cherry-picking) of variables within the traditional OLS approach gives the most room for analyst to manipulate and choose whichever variables to include the OLS model, yielding the predictions that are most favorable for their desired goal.
 
 ```{r}
 #6.4 We used these models to predict recidivism. Suppose instead you wanted to know whether priors_count causes higher recidivism.
@@ -462,4 +462,4 @@ mean(test_white$recidivism)
 
 The predicted rate for recidivism for African Americans is 51.2% compared to the actual rate of 52.1%, so about a 1 percentage point underestimate. The predicated rate for recidivism for white people is 37.9% compared to the actual rate of 40%, so an underestimate of about 2 percentage points.
 
-The trade-off of using prediction algorithms is that they are based on (and can possibly increase) the measurement of systemic barriers based on generalizing racial disparities through statistics, rather than the reflecting the true, individual nature/circumstances of people now. A strength of the prediction model, though, is that it predicts the recidivism rate for African Americans will be greater compared to the recidivism rate for white people, reflecting the problems we do understand causing this racial disparities. In turn, though, a weakness, is that the model doesn't answer how to address the racial disparity beyond just acknowledging it.
+The trade-off of using prediction algorithms is that they are based on (and can possibly increase) the measurement of systemic barriers based on generalizing historical racial disparities through statistics, rather than the reflecting the true, individual nature/circumstances of people now. A strength of the prediction model, though, is that it predicts the recidivism rate for African Americans will be greater compared to the recidivism rate for white people, reflecting the problems we do understand causing this racial disparities. In turn, though, a weakness, is that the model doesn't answer how to address the racial disparity beyond just acknowledging it.
