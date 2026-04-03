@@ -86,8 +86,6 @@ kable(recid_by_priors, digits = 3)
 ggplot(recid_by_priors, aes(x = priors_cat, y = recid_rate)) +
   geom_col() +
   labs(title = "Recidivism Rate by Prior Offenses Category",
-
-T
        x = "Prior Offenses Category",
        y = "Recidivism Rate") +
   theme_minimal()
@@ -113,8 +111,12 @@ nrow(test)
 ```{r}
 #2.2 Fit an OLS regression of recidivism on all other variables in the training data using lm(recidivism ~ ., data = train). This gives you a model with 16 predictors.
 
-train <- train %>% select(-priors_cat)
-test <- test %>% select(-priors_cat)
+set.seed(51)
+n <- nrow(compas)
+train_idx <- sample(1:n, size = floor(0.8 * n))
+train <- compas[train_idx, ]
+
+train <- train %>% select(-any_of("priors_cat"))
 
 ols_simple <- lm(recidivism ~ ., data = train)
 summary(ols_simple)
@@ -146,12 +148,12 @@ rmse_test_simple
 
 # (c) How large is the gap between in-sample and out-of-sample RMSE? Is OLS overfitting with 16 predictors?
 
-rmse_test_simple - rmse_train_simple# (a) Compute the in-sample RMSE (predictions on the training data).
-# (a) Compute the in-sample RMSE (predictions on the training data).
-
+rmse_test_simple - rmse_train_simp
 
 #Hint: Use predict(model, newdata = ...) to generate predictions, then compute RMSEmanually.
 ```
+
+The gap between in-sample and out-of-sample RMSE is 0.0016, which appears to be quite a small gap. This mean OLS is likely not overfiting with 16 predictors; it predicts both training and test/new data well.
 
 ```{r}
 #2.4 A single train/test split depends on which observations happened to land in each group. Crossvalidation averages over multiple splits to give a more stable estimate of out-of-sample performance. 
@@ -160,75 +162,244 @@ rmse_test_simple - rmse_train_simple# (a) Compute the in-sample RMSE (prediction
 # 2. For each fold 𝑘 = 1, … , 5: fit OLS on the other 4 folds, predict fold 𝑘, compute RMSE.
 # 3. Average the 5 RMSE values.
 
+set.seed(51)
+folds <- sample(rep(1:5, length.out = nrow(train)))
+
+rmse_cv <- numeric(5)
+
+for (k in 1:5) {
+  train_k <- train[folds != k, ]
+  test_k <- train[folds == k, ]
+  
+  model_k <- lm(recidivism ~ ., data = train_k)
+  pred_k <- predict(model_k, newdata = test_k)
+  
+  rmse_cv[k] <- rmse(test_k$recidivism, pred_k)
+}
+
+
 # (a) What is the 5-fold CV estimate of RMSE? How does it compare to your single-split out-of-sample RMSE?
+
+rmse_cv
+mean(rmse_cv)
+
 # (b) In your own words, why is cross-validation more reliable than a single train/test split?
 # (c) When we use cv.glmnet() later, it does this same process internally to choose the penalty parameter 𝜆. Why is cross-validation the right tool for choosing 𝜆?
 ```
+
+The 5-fold CV estimate of RMSE is 0.462, compared to the single-split out-of-sample RMSE from 2.3 which was also 0.462.
+
+Cross-validation is more reliable than a single train/test split because it varies which parts of the sample will be used to train or test the data. It averages the model's performance over/across different test folds, unlike the single train/split where the results are determined based on one random split (rather than different, random variations of splits).
+
+The penalty parameter needs to balance between bias and variance. Cross-validation estimates out-of-sample predictive performance of the model. Cross-validation ensures the penalty is chosen across separate, random variations of allocated train/test data to ensure the model's performance to multiple variations of unseen test data. Therefore, the penalty parameter lambda will be chosen based on what can be best generalized to new/unseen/test data.
 
 ```{r}
 #3.1 The formula below creates all pairwise interactions plus squared terms for the continuous variables. This expands our feature set from 16 to about 141 predictors.
 
 # (a) How many predictors does this expanded model have?
+
+# Full interaction formula
+f_full <- recidivism ~ (.)^2 +
+I(age^2) + I(priors_count^2) +
+I(juv_fel_count^2) + I(juv_misd_count^2) +
+I(juv_other_count^2)
+# Create design matrices for glmnet
+X_train <- model.matrix(f_full, data = train)[, -1]
+X_test <- model.matrix(f_full, data = test)[, -1]
+y_train <- train$recidivism
+y_test <- test$recidivism
+# How many features now?
+ncol(X_train)
+
 # (b) What is the ratio of training observations to predictors? (Compare to the simple model.
+nrow(X_train)
+nrow(X_train) / ncol(X_train)
 ```
 
 ```{r}
 #3.2 Fit OLS on the expanded feature set: ols_full <- lm(f_full, data = train).
 
+ols_full <- lm(f_full, data = train)
+
+pred_train_full <- predict(ols_full, newdata = train)
+pred_test_full <- predict(ols_full, newdata = test)
+
+rmse_train_full <- rmse(train$recidivism, pred_train_full)
+rmse_test_full <- rmse(test$recidivism, pred_test_full)
+
 # (a) Compute the in-sample RMSE for this model.
+
+rmse_train_full
+
 #(b) Compute the out-of-sample RMSE.
+
+rmse_test_full
+
 # (c) How does the in-sample/out-of-sample gap compare to the simple 19-predictor OLS? What happened and why?
+
+rmse_test_full - rmse_train_full
 ```
+
+The gap between in-sample and out-of-sample gap is 0.0405 with 141 predictors, compared to 0.0016 with 16 predictor OLS (2.3). In sample RMSE was 0.4606 for 16-predictors, compared to 0.448. Out of sample RMSE was 0.4890 for 16-predictors, compared to 0.4622.
+
+Although the in-sample RMSE was less for 141 predictors, the out-of sample RMSE was greater for 141 predictors. Furthermore, the in-sample/out-of-sample gap increased by about 0.04. This is because the new OLS model with 141 predictors is overfitting (stronger for and closely fitting to training data noise, weaker in predicting for new/test data where same training data noise does not exist).
 
 ```{r}
 #3.3 In 2–3 sentences, explain why adding 180 interaction terms made the model’s in-sample fit better but its out-of-sample predictions worse. What is this phenomenon called?
 ```
 
+Although the in-sample RMSE was less for 141 predictors, the out-of sample RMSE was greater for 141 predictors. This is because the new OLS model with 141 predictors is overfitting (stronger for and closely fitting to training data noise, weaker in predicting for new/test data where same training data noise does not exist). The same noise patterns do not necessarily exist in the new/test data beyond the training data.
+
+This phenomena is called over-fitting.
+
 ```{r}
 #4.1 Use cv.glmnet() with alpha = 0 to fit Ridge regression on the expanded training data (the X_train matrix with ~141 features). Use 10-fold cross-validation (the default) to select the optimal 𝜆.
 
+set.seed(51) # for reproducible CV folds
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0, nfolds = 10)
+
 # (a) What is the optimal 𝜆 selected by cross-validation? (Use lambda.min.)
+
+cv_ridge$lambda.min
+
 # (b) Plot the cross-validation curve using plot(cv_ridge). What does this plot show?
+
+plot(cv_ridge)
+title("Ridge Regression: Impact of Lambda on MSE", line = 3)
+mtext("Vertical lines: lambda.min (left) and lambda.1se (right)", cex = 0.8)
 ```
+
+This plot shows the cross-validation prediction error (error or RMSE) as related to the different values of lambda/penalty value and helps us determine the lambda/penalty value that minimizes squared error based on the model's fit.
 
 ```{r}
 #4.2 Compute the out-of-sample RMSE for Ridge. Compare to both the simple OLS (16 vars) and the kitchen-sink OLS (~141 vars). What happened?
+
+ridge_pred <- predict(cv_ridge, s = "lambda.min", newx = X_test)
+rmse_ridge <- rmse(y_test, ridge_pred)
+rmse_ridge
 ```
+
+The out-of-sample RMSE for Ridge is 0.4700. Out of sample RMSE was 0.4890 for 16-predictors, compared to 0.4622 for 141 variable predictors. The out-of sample for Ridge is between both; greater (more error for unfamiliar data) than the out-of-sample RMSE for 141 variable predictors by about 0.01 and less (less error for unfamiliar data)than the out-of-sample for 16-predictors by about 0.029.
+
+Ridge is shrinking variables and reducing variance without overfiting to all the noise of solely the training data.
 
 ```{r}
 #4.3 Extract the Ridge coefficients using coef(cv_ridge, s = "lambda.min"). Did Ridge eliminate any variables? Why or why not?
+
+ridge_coefs <- coef(cv_ridge, s = "lambda.min")
+sum(ridge_coefs != 0)
+sum(ridge_coefs == 0)
+
+colnames(X_train)[apply(X_train, 2, function(z) all(z == 0))]
 ```
+
+Ridge generally just shrinks variables and does not eliminate/set variables directly equal to 0. However, there are 13 variables with a coefficient of 0. All 141 variables, though, should remain in the model under Ridge.
+
+These variables were set to zero to begin with probably due to the variables being mutually exclusive. A person can't be both under 25 years old (age_under_25) and between 25 and 45 years old (age_25_45). The race variable might always be coded in a mutually-exclusive way, meaning the product of any interaction between two race variables is always 0 (either 1 or 0, can't have two 1s — can't be two races).
+
+No, Ridge itself did not set any variables equal to zero.
 
 ```{r}
 #5.1 Use cv.glmnet() with alpha = 1 on the expanded training data. Remember to set your seed first for reproducibility.
 
+set.seed(51)
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1, nfolds = 10)
+
 #(a) What is the optimal 𝜆?
+
+cv_lasso$lambda.min
+
 #(b) Plot the cross-validation curve.
+
+plot(cv_lasso)
+title("Lasso Regression: Impact of Lambda on MSE", line = 3)
+mtext("Vertical lines: lambda.min (left) and lambda.1se (right)", cex = 0.8)
 ```
 
 ```{r}
 #5.2 Extract the LASSO coefficients at lambda.min.
 
 #(a) How many of the ~141 variables survived (non-zero coefficient)? How many were eliminated?
+
+lasso_coefs <- coef(cv_lasso, s = "lambda.min")
+
+nonzero <- sum(lasso_coefs != 0)
+zero <- sum(lasso_coefs == 0)
+
+nonzero
+zero
+
+#28+114 = 142. Exclude the intercept, so 27 nonzero variables. 
+
 #(b) List a few of the surviving interaction terms. Do they make substantive sense?
-# (c) Baker (2025) argues that LASSO reduces “subjective discretion” in model building. How does what you see here illustrate that argument?
+
+lasso_names <- rownames(lasso_coefs)[lasso_coefs[,1] != 0]
+lasso_names[1:20]
+
+#(c) Baker (2025) argues that LASSO reduces “subjective discretion” in model building. How does what you see here illustrate that argument?
 ```
 
+LASSO retains 27 (excluding the intercept 28-1) of 141 variables, eliminating 114 (including the 13 variables are already equal to zero).
+
+Some of the surviving interactions terms are "female: black", "female:priors_count" and "black:juv_fel_count." This makes sense because there is typically strong sociologically data showing that certain systemic conditions for specifics races and gender can lead to higher incarceration rates when younger, and the continued faltering lack of systemic support leads to higher rates of recidivism compared to genders/races without the same lack of access to resources.
+
+Under Baker, experts in a courtroom trial would argue over which predictor variables to consider; whoever wins in the eyes of a court is whoever is able to tell the better story. However, LASSO reduces "subjective discretion" because it systematically and mathematically via the algorithm with the penalty lambda (shrinks and selects, weak coefficients zeroed out exactly with absolute values) decides which variables and interactions to keep, backed by data beyond just human judgement; still the remaining variables make sense for human interpretation but do not rely on humans solely alone for subjectivity.
+
 ```{r}
-#5.3 Compute the out-of-sample RMSE for LASSO. How does it compare to OLS (both vers
+#5.3 Compute the out-of-sample RMSE for LASSO. How does it compare to OLS (both versions) and Ridge? 
+
+lasso_pred <- predict(cv_lasso, s = "lambda.min", newx = X_test)
+rmse_lasso <- rmse(y_test, lasso_pred)
+rmse_lasso
 ```
+
+The out-of-sample RMSE for LASSO is 0.459. The out-of-sample RMSE for Ridge is 0.4700. Out of sample RMSE was 0.4890 for 16-predictors, compared to 0.4622 for 141 variable predictors. The out-of-sample RMSE for LASSO is less than all three: less than RMSE for 141 variable predictor by 0.01, less than RMSE for Ridge by about 0.01, and less than RMSE for 16-predictors by about 0.02. Lower RMSE means less error when predicting for test/outside/unfamiliar data.
+
+LASSO shrinks/eliminates variables and reducing variance without overfitting to all the noise of solely the training data.
 
 ```{r}
 #6.1 Fit an Elastic Net with alpha = 0.5 on the expanded training data. Remember to set your seed first. Compute its out-of-sample RMSE and count how many variables it retains.
+
+set.seed(51)
+cv_enet <- cv.glmnet(X_train, y_train, alpha = 0.5, nfolds = 10)
+
+enet_pred <- predict(cv_enet, s = "lambda.min", newx = X_test)
+rmse_enet <- rmse(y_test, enet_pred)
+
+rmse_enet
+
+cv_enet$lambda.min
+enet_coefs <- coef(cv_enet, s = "lambda.min")
+sum(enet_coefs != 0)
+sum(enet_coefs == 0)
+
+#44 variables retained, but one is intercept. 44+98 = 142. Should be 141 variables.
 ```
+
+Out-of-sample RMSE is 0.458. 43 variables retained, 98 eliminated (including 13 variables already equal to zero).
 
 ```{r}
 #6.2 Fill in this table with your results:
 
-#(a)Which model has the lowest out-of-sample RMSE?
+#(a) Which model has the lowest out-of-sample RMSE?
 # (b) Which model has the best in-sample fit? Is that the same model?
 # (c) In 2–3 sentences, explain what this table teaches about the bias-variance tradeoff.
 ```
+
+|                    |                |                        |
+|--------------------|----------------|------------------------|
+| **Model**          | **Predictors** | **Out-of-Sample RMSE** |
+| **OLS (16 vars)**  | 16             | 0.4890                 |
+| **OLS (141 vars)** | 141            | 0.4622                 |
+| **Ridge**          | 141            | 0.4700                 |
+| **LASSO**          | 27             | 0.4593                 |
+| **Elastic Net**    | 43             | 0.4583                 |
+
+The model with the lowest out-of-sample RMSE is Elastic Net with 0.4583.
+
+The model with the strongest in-sample RMSE is Kitchen Sink since the 141 variables are tailored to meet the noise and fit extremely closely (overfit) to the patterns of the training, in-sample, familiar data.
+
+This tables shows that models that minimize training error will end up generalizing poorly due to high variance across new, unfamiliar data. Ridge/LASSO/Elastic Net introduce a penalty and increase bias; in exchange, the variance is lowered compared to both OLS models since these models sacrifice bias to reduce variance across new data. Therefore, this table shows how stronger predictions and less variance for new predictions can be implemented if some bias is introduced unlike in OLS.
 
 ```{r}
 #6.3 In Baker (2025), two experts in the Halliburton securities case selected different peer firms and reached different conclusions about whether a stock drop was statistically significant.
@@ -237,20 +408,55 @@ rmse_test_simple - rmse_train_simple# (a) Compute the in-sample RMSE (prediction
 # (b) Based on your experience with LASSO in this problem set, what aspect of the traditional OLS approach gives the analyst the most room for manipulation?
 ```
 
+Under Baker, experts in a courtroom trial would argue over which predictor variables to consider; whoever wins in the eyes of a court is whoever is able to tell the better story. However, LASSO reduces "subjective discretion" because it systematically and mathematically via the algorithm with the penalty lambda (shrinks and selects, weak coefficients zeroed out exactly with absolute values) decides which variables and interactions to keep, backed by data beyond just human judgement; still the remaining variables make sense for human interpretation but do not rely on humans solely alone for subjectivity. It could determine which peer firms to keep and which to drop as related to stock returns based on a data-driven process.
+
+The OLS approach is not always back by data and algorithm that decides which variables to keep, which variables to minimize, or even variables to completely reduce to zero. Therefore, the opportunity for selectivity of variables within the traditional OLS approach gives the most room for analyst to manipulate and choose whichever variables to include the OLS model, yielding the predictions that are most favorable for their desired goal.
+
 ```{r}
 #6.4 We used these models to predict recidivism. Suppose instead you wanted to know whether priors_count causes higher recidivism.
 
 #(a) Would the LASSO coefficient on priors_count answer this causal question? Why or why not?
+
 #(b) What is the difference between using regression for prediction versus using it for causal inference?
 ```
+
+No, LASSO coefficient is simply used for prediction for the recidivism rate for a person, not to establish a casual relationship or make a causal inference. The model in LASSO simply shows the correlation between various variables, include priors_count, to the recidivism likelihood for a person, not a causal relationship between the variables and the recidivism outcome.
+
+When regression is used for prediction, the variables included in the regression model are used to strongly predict an outcome compared to its true value (minimize RMSE). The variables are correlated with the predicted value. For causal inference, you have to carefully consider which variables you are including/excluding, especially if you are attempting to establish one as the supposed treatment variable and the rest as control variables (what has to stay constant?). The goal is isolating the effect of one specific treatment variable and reducing bias by minimizing the effect of other variables as controls.
 
 ```{r}
 #6.5 Algorithms like COMPAS are used in real courtrooms to inform bail and sentencing decisions.
 
 #(a) Using your simple OLS model (16 vars), compute the mean predicted recidivism probability separately for Black defendants and white defendants in the test set. Is there a difference?
 
+test <- test %>%
+  mutate(pred_simple = predict(ols_simple, newdata = test))
+
+nrow(test_black)
+nrow(test_white)
+
+test_black <- test %>% filter(black == 1)
+
+test_white <- test %>%
+  filter(black == 0,
+         hispanic == 0,
+         asian == 0,
+         other_race == 0,
+         native_american == 0)
+
+mean(test_black$pred_simple)
+mean(test_white$pred_simple)
+
 #Hint: White is the reference category (all race dummies equal 0). You can identify white defendants with black == 0 & hispanic == 0 & asian == 0 & other_race == 0& native_american == 0. 
 
 # (b) Now compute the actual recidivism rate for each group. Compare the predictions to the actual rates. 
+
+mean(test_black$recidivism)
+mean(test_white$recidivism)
+
 # (c) In 2–3 sentences: What are the tradeoffs of using prediction algorithms in criminal justice? Reference something specific from your analysis.
 ```
+
+The predicted rate for recidivism for African Americans is 51.2% compared to the actual rate of 52.1%, so about a 1 percentage point underestimate. The predicated rate for recidivism for white people is 37.9% compared to the actual rate of 40%, so an underestimate of about 2 percentage points.
+
+The trade-off of using prediction algorithms is that they are based on (and can possibly increase) the measurement of systemic barriers based on generalizing racial disparities through statistics, rather than the reflecting the true, individual nature/circumstances of people now. A strength of the prediction model, though, is that it predicts the recidivism rate for African Americans will be greater compared to the recidivism rate for white people, reflecting the problems we do understand causing this racial disparities. In turn, though, a weakness, is that the model doesn't answer how to address the racial disparity beyond just acknowledging it.
