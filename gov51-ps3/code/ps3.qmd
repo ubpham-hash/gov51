@@ -10,8 +10,6 @@ https://github.com/ubpham-hash/gov51
 ```{r}
 #1.1 Load the tidyverse, glmnet, and knitr packages. Then load the COMPAS dataset from data/compas_clean.csv.
 
-install.packages("glmnet")
-
 library(tidyverse)
 library(glmnet)
 library(knitr)
@@ -128,7 +126,7 @@ summary(ols_simple)
 #(b) Interpret the coefficient on priors_count in one sentence.
 ```
 
-The predictors that are statistically significant at the 5% level have t-value less than 1.96 or greater than 1.96. This includes age, female, priors_count, felony, age between 25 and 45, has_juv_misd.
+The predictors that are statistically significant at the 5% level have t-value less than -1.96 or greater than 1.96. This includes age, female, priors_count, felony, age between 25 and 45, has_juv_misd.
 
 Priors_count coefficient is 0.029532. This means, according to the OLS model, for every 1 count increase in a person's prior counts of crime, their rate of recidivism (percentage) will increase by 2.9532 percentage points.
 
@@ -151,7 +149,7 @@ rmse_test_simple
 
 # (c) How large is the gap between in-sample and out-of-sample RMSE? Is OLS overfitting with 16 predictors?
 
-rmse_test_simple - rmse_train_simp
+rmse_test_simple - rmse_train_simple
 
 #Hint: Use predict(model, newdata = ...) to generate predictions, then compute RMSEmanually.
 ```
@@ -211,6 +209,7 @@ X_train <- model.matrix(f_full, data = train)[, -1]
 X_test <- model.matrix(f_full, data = test)[, -1]
 y_train <- train$recidivism
 y_test <- test$recidivism
+X_test <- X_test[, colnames(X_train), drop = FALSE]
 # How many features now?
 ncol(X_train)
 
@@ -434,6 +433,15 @@ When regression is used for prediction, the variables included in the regression
 
 test <- test %>%
   mutate(pred_simple = predict(ols_simple, newdata = test))
+
+test_black <- test %>% filter(black == 1)
+
+test_white <- test %>%
+  filter(black == 0,
+         hispanic == 0,
+         asian == 0,
+         other_race == 0,
+         native_american == 0)
 
 nrow(test_black)
 nrow(test_white)
