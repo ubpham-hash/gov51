@@ -1,0 +1,256 @@
+---
+title: "ps3.qmd"
+format: html
+editor: visual
+---
+
+```{r}
+#1.1 Load the tidyverse, glmnet, and knitr packages. Then load the COMPAS dataset from data/compas_clean.csv.
+
+install.packages("glmnet")
+
+library(tidyverse)
+library(glmnet)
+library(knitr)
+
+compas <- read_csv("/Users/ubpham/gov51/gov51-ps3/data/raw/compas_clean.csv")
+```
+
+```{r}
+#1.2 How many observations and variables are in the dataset? What is the unit of observation?
+
+head(compas)
+
+nrow(compas)
+ncol(compas)
+```
+
+There are 7214 observations and 17 variables.
+
+Based on head (see the first few rows of the data set), each row appears to be one person (based on their age, gender, recidivism, race).
+
+```{r}
+#1.3 Examine the outcome variable The variable recidivism equals 1 if the person was rearrested within two years and 0 otherwise.
+
+# (a) What is the overall recidivism rate in the data?
+
+mean(compas$recidivism)
+
+# (b) Is this outcome continuous or binary? Why does this matter for how we interpret predictions from a linear model?
+```
+
+Overall recidivism rate 45.1% (0.45065, recidivism is stored as a binary, so take mean of 1 and 0).
+
+The outcome is binary. Recidivism is 1 or 0; 1 if the other person WAS arrested within two years and 0 if the person doesn't meet that condition.
+
+This matters because the linear model OLS may predict values below 0 or above 1; however, since recidivism is binary, this may fall outside the valid probability range (probability from 0 to 1). The linear model predictions, however, should be interpreted to predicting the probability of recidivism; though, OLS is not restricted when predicting for binary variables. We should be aware the linear model may predict unrealistic probabilities outside the range of 0 to 1 (not valid probability).
+
+```{r}
+#1.4 Create a summary statistics table showing the mean and standard deviation of all variables in the dataset. Briefly note which variables have the most variation and which have the least.
+
+summary_table <- compas %>%
+  pivot_longer(everything(), names_to = "variable", values_to = "value") %>%
+  group_by(variable) %>%
+  summarise(mean = mean(value), sd = sd(value))
+
+kable(summary_table, digits = 3)
+```
+
+The variable age has the most variation (standard deviation of 11.889), followed by priors_count (standard deviation of 4.883).
+
+Native American has the least variation (standard deviation of 0.050), followed by the Asian variable with the second to least variation (standard deviation of 0.066).
+
+```{r}
+#1.5 Create a bar chart showing the recidivism rate by number of prior offenses (priors_count).
+
+# Group priors_count into categories: 0, 1–2, 3–5, 6–10, and 11+. What pattern do you see?
+
+compas <- compas %>%
+  mutate(priors_cat = case_when(
+    priors_count == 0 ~ "0",
+    priors_count %in% 1:2 ~ "1-2",
+    priors_count %in% 3:5 ~ "3-5",
+    priors_count %in% 6:10 ~ "6-10",
+    priors_count >= 11 ~ "11+"
+  )) %>%
+  mutate(priors_cat = factor(priors_cat,
+                             levels = c("0", "1-2", "3-5", "6-10", "11+")))
+
+recid_by_priors <- compas %>%
+  group_by(priors_cat) %>%
+  summarise(recid_rate = mean(recidivism),
+            n = n())
+
+kable(recid_by_priors, digits = 3)
+
+ggplot(recid_by_priors, aes(x = priors_cat, y = recid_rate)) +
+  geom_col() +
+  labs(title = "Recidivism Rate by Prior Offenses Category",
+
+T
+       x = "Prior Offenses Category",
+       y = "Recidivism Rate") +
+  theme_minimal()
+```
+
+The pattern that I see is that as the number of prior offenses increases, the recidivism rate appears to increase as well. Those with 0 prior offenses have the lowest recidivism rate, while those with 11+ prior offenses have the highest recidivism rate, with a consistent increase in recidivism rate as the prior offenses category increase.
+
+```{r}
+#2.1 Set your seed to 51 for reproducibility. Split the data into a training set (80 ) and a test set (20%)
+
+set.seed(51)
+n <- nrow(compas)
+train_idx <- sample(1:n, size = floor(0.8 * n))
+train <- compas[train_idx, ]
+test <- compas[-train_idx, ]
+
+#How many observations are in each set?
+
+nrow(train)
+nrow(test)
+```
+
+```{r}
+#2.2 Fit an OLS regression of recidivism on all other variables in the training data using lm(recidivism ~ ., data = train). This gives you a model with 16 predictors.
+
+train <- train %>% select(-priors_cat)
+test <- test %>% select(-priors_cat)
+
+ols_simple <- lm(recidivism ~ ., data = train)
+summary(ols_simple)
+
+#(a) Which predictors are statistically significant at the 5% level?
+#(b) Interpret the coefficient on priors_count in one sentence.
+```
+
+The predictors that are statistically significant at the 5% level have t-value less than 1.96 or greater than 1.96. This includes age, female, priors_count, felony, age between 25 and 45, has_juv_misd.
+
+Priors_count coefficient is 0.029532. This means, according to the OLS model, for every 1 count increase in a person's prior counts of crime, their rate of recidivism (percentage) will increase by 2.9532 percentage points.
+
+```{r}
+#2.3 Root Mean Squared Error (RMSE) measures average prediction error:
+
+rmse <- function(actual, predicted) sqrt(mean((actual - predicted)^2))
+
+# (a) Compute the in-sample RMSE (predictions on the training data).
+
+pred_train_simple <- predict(ols_simple, newdata = train)
+rmse_train_simple <- rmse(train$recidivism, pred_train_simple)
+rmse_train_simple
+
+# (b) Compute the out-of-sample RMSE (predictions on the test data).
+
+pred_test_simple <- predict(ols_simple, newdata = test)
+rmse_test_simple <- rmse(test$recidivism, pred_test_simple)
+rmse_test_simple
+
+# (c) How large is the gap between in-sample and out-of-sample RMSE? Is OLS overfitting with 16 predictors?
+
+rmse_test_simple - rmse_train_simple# (a) Compute the in-sample RMSE (predictions on the training data).
+# (a) Compute the in-sample RMSE (predictions on the training data).
+
+
+#Hint: Use predict(model, newdata = ...) to generate predictions, then compute RMSEmanually.
+```
+
+```{r}
+#2.4 A single train/test split depends on which observations happened to land in each group. Crossvalidation averages over multiple splits to give a more stable estimate of out-of-sample performance. 
+# Implement 5-fold cross-validation for the simple OLS model:
+# 1. Randomly assign each training observation to one of 5 folds.
+# 2. For each fold 𝑘 = 1, … , 5: fit OLS on the other 4 folds, predict fold 𝑘, compute RMSE.
+# 3. Average the 5 RMSE values.
+
+# (a) What is the 5-fold CV estimate of RMSE? How does it compare to your single-split out-of-sample RMSE?
+# (b) In your own words, why is cross-validation more reliable than a single train/test split?
+# (c) When we use cv.glmnet() later, it does this same process internally to choose the penalty parameter 𝜆. Why is cross-validation the right tool for choosing 𝜆?
+```
+
+```{r}
+#3.1 The formula below creates all pairwise interactions plus squared terms for the continuous variables. This expands our feature set from 16 to about 141 predictors.
+
+# (a) How many predictors does this expanded model have?
+# (b) What is the ratio of training observations to predictors? (Compare to the simple model.
+```
+
+```{r}
+#3.2 Fit OLS on the expanded feature set: ols_full <- lm(f_full, data = train).
+
+# (a) Compute the in-sample RMSE for this model.
+#(b) Compute the out-of-sample RMSE.
+# (c) How does the in-sample/out-of-sample gap compare to the simple 19-predictor OLS? What happened and why?
+```
+
+```{r}
+#3.3 In 2–3 sentences, explain why adding 180 interaction terms made the model’s in-sample fit better but its out-of-sample predictions worse. What is this phenomenon called?
+```
+
+```{r}
+#4.1 Use cv.glmnet() with alpha = 0 to fit Ridge regression on the expanded training data (the X_train matrix with ~141 features). Use 10-fold cross-validation (the default) to select the optimal 𝜆.
+
+# (a) What is the optimal 𝜆 selected by cross-validation? (Use lambda.min.)
+# (b) Plot the cross-validation curve using plot(cv_ridge). What does this plot show?
+```
+
+```{r}
+#4.2 Compute the out-of-sample RMSE for Ridge. Compare to both the simple OLS (16 vars) and the kitchen-sink OLS (~141 vars). What happened?
+```
+
+```{r}
+#4.3 Extract the Ridge coefficients using coef(cv_ridge, s = "lambda.min"). Did Ridge eliminate any variables? Why or why not?
+```
+
+```{r}
+#5.1 Use cv.glmnet() with alpha = 1 on the expanded training data. Remember to set your seed first for reproducibility.
+
+#(a) What is the optimal 𝜆?
+#(b) Plot the cross-validation curve.
+```
+
+```{r}
+#5.2 Extract the LASSO coefficients at lambda.min.
+
+#(a) How many of the ~141 variables survived (non-zero coefficient)? How many were eliminated?
+#(b) List a few of the surviving interaction terms. Do they make substantive sense?
+# (c) Baker (2025) argues that LASSO reduces “subjective discretion” in model building. How does what you see here illustrate that argument?
+```
+
+```{r}
+#5.3 Compute the out-of-sample RMSE for LASSO. How does it compare to OLS (both vers
+```
+
+```{r}
+#6.1 Fit an Elastic Net with alpha = 0.5 on the expanded training data. Remember to set your seed first. Compute its out-of-sample RMSE and count how many variables it retains.
+```
+
+```{r}
+#6.2 Fill in this table with your results:
+
+#(a)Which model has the lowest out-of-sample RMSE?
+# (b) Which model has the best in-sample fit? Is that the same model?
+# (c) In 2–3 sentences, explain what this table teaches about the bias-variance tradeoff.
+```
+
+```{r}
+#6.3 In Baker (2025), two experts in the Halliburton securities case selected different peer firms and reached different conclusions about whether a stock drop was statistically significant.
+
+#(a) How did LASSO help narrow the disagreement between dueling experts?
+# (b) Based on your experience with LASSO in this problem set, what aspect of the traditional OLS approach gives the analyst the most room for manipulation?
+```
+
+```{r}
+#6.4 We used these models to predict recidivism. Suppose instead you wanted to know whether priors_count causes higher recidivism.
+
+#(a) Would the LASSO coefficient on priors_count answer this causal question? Why or why not?
+#(b) What is the difference between using regression for prediction versus using it for causal inference?
+```
+
+```{r}
+#6.5 Algorithms like COMPAS are used in real courtrooms to inform bail and sentencing decisions.
+
+#(a) Using your simple OLS model (16 vars), compute the mean predicted recidivism probability separately for Black defendants and white defendants in the test set. Is there a difference?
+
+#Hint: White is the reference category (all race dummies equal 0). You can identify white defendants with black == 0 & hispanic == 0 & asian == 0 & other_race == 0& native_american == 0. 
+
+# (b) Now compute the actual recidivism rate for each group. Compare the predictions to the actual rates. 
+# (c) In 2–3 sentences: What are the tradeoffs of using prediction algorithms in criminal justice? Reference something specific from your analysis.
+```
