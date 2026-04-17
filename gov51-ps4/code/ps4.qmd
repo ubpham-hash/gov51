@@ -258,9 +258,9 @@ iv_iq
 # (c) What does the comparison between part (a) and part (b) suggest about the source of the discrepancy between OLS and IV?
 ```
 
-For OLS of lwage on educ, IQ, and all other controls, OLS coefficient on educ is 0.067568681. Previously, OLS (without IQ score) estimates the return to education is 0.07149827. This means with the IQ score in OLS, the educ coefficient decreases by 0.004.
+For OLS of lwage on educ, IQ, and all other controls, OLS coefficient on educ is 0.067568681. Previously, OLS (without IQ score) estimates the return to education is 0.07149827. This means with the IQ score in OLS, the educ coefficient decreases by 0.004; the estimate does not change substantially.
 
-For 2SLS of lwage on educ, IQ, and all other controls, 2SLS coefficient on educ is 0.1093899302. Previously, 2SLS (without IQ score) estimates the return to education is 0.124893231. This means with the IQ score in OLS, the educ coefficient decreases by 0.015.
+For 2SLS of lwage on educ, IQ, and all other controls, 2SLS coefficient on educ is 0.1093899302. Previously, 2SLS (without IQ score) estimates the return to education is 0.124893231. This means with the IQ score in OLS, the educ coefficient decreases by 0.015; the estimate does not change substantially.
 
 The 2SLS coefficient still remains substantially larger than the OLS coefficient on educ. Since the coefficients also remained largely similar after the addition of/controlling for the IQ score variable, this explains that IQ score (similar to an individual's ability/motivation as raised as a concern in 1.5) is not the main contributor to OLS being biased downward.
 
