@@ -41,7 +41,7 @@ mean_educ <- mean(card$educ, na.rm = TRUE)
 mean_educ
 ```
 
-The mean years of education completed for people in the Card Dataset is 13.26 years.
+The mean years of education completed for people in the Card Data Set is 13.26 years.
 
 There are unusual spikes at 12 years of completed education and 16 years of completed education. The possible explanation is that this is the end of a degree cycle, and most people may stop pursuing further education upon the completion of a specific degree. For 12 years, this means graduating from high school, so many may stop pursuing further education and end with a maximum of a high school degree. Similarly, 16 years indicates four years of additional schooling post high school (such as a bachelor's), another popular concrete stopping point for people to stop pursuing further education after the completion of a specific degree.
 
@@ -90,7 +90,7 @@ first_stage
 # Interpret the coefficient on nearc4 in a sentence. Does the sign make sense?
 ```
 
-The coefficient of nearc4 is 0.327. Given that all other variables remain constant (black, living in a metropolitan area / smsa, living in South, experience level (and squared), and marital status), this regression model predicts that living near a 4-year college is asociated by a 0.327 year increase in the number of years of education one will go through.
+The coefficient of nearc4 is 0.327. Given that all other variables remain constant (black, living in a metropolitan area / smsa, living in South, experience level (and squared), and marital status), this regression model predicts that living near a 4-year college is associated by a 0.327 year increase in the number of years of education one will go through.
 
 The sign of the coefficient is positive (positive 0.327). This make sense, given that living closer to a college may be more likely to convince you to go to a college (being exposed to the ideas/opportunities of attending a four-year college post high school for further education), overall familiarity with the college environment, and increasing cost-accessibility from being able to attend a nearby college.
 
@@ -123,7 +123,7 @@ The F-statistic is asking if instrument improves the first stage of the 2SLS.
 
 In summary, nearc4 is the IV, educ is the treatment, and log wage is the outcome. Exclusion restriction states that nearc4 only affects logwage via its relationship with educ. Other possible causal routes from nearc4 to logwage are exclusion-restriction violations and invalidate the instrument (such as nearc4 to other confounders to - logwage).
 
-\(b\) There is a possible way the exclusion restruction could be violated where growing up near a college affects your wages without considering education level. If you grow up near college institution (or possibly amplified depending on elite/private/wealthy institutions), you have access to a lot of students/donors/faculty early on in your life. You can build connections early, talk to guest speakers that go to campus, and have access to highly-access databases for research through students you befriend; in turn, your extensive donors/network/access/connections/resources can lead you to achieving higher wages, regardless if you actually attend the institution and/or pursue further education.
+\(b\) There is a possible way the exclusion restriction could be violated where growing up near a college affects your wages without considering education level. If you grow up near college institution (or possibly amplified depending on elite/private/wealthy institutions), you have access to a lot of students/donors/faculty early on in your life. You can build connections early, talk to guest speakers that go to campus, and have access to highly-access databases for research through students you befriend; in turn, your extensive donors/network/access/connections/resources can lead you to achieving higher wages, regardless if you actually attend the institution and/or pursue further education.
 
 ```{r}
 #2.5 If the instrument is as-good-as-randomly assigned, respondents who grew up near a college should look similar on pre-treatment characteristics to those who did not.
@@ -153,7 +153,7 @@ reduced_form <- lm_robust(lwage ~ nearc4 + black + smsa + south +
 reduced_form
 ```
 
-The coefficient on nearc4 is 0.040854001. Given that all other variables remain constant (black, living in a metropolitan area / smsa, living in South, experience level (and squared), and marital status), this regression model predicts that living near a 4-year college is asociated by a 4.1% increase in log wages.
+The coefficient on nearc4 is 0.040854001. Given that all other variables remain constant (black, living in a metropolitan area / smsa, living in South, experience level (and squared), and marital status), this regression model predicts that living near a 4-year college is associated by a 4.1% increase in log wages.
 
 ```{r}
 #3.2 Using the first-stage coefficient from Section 2.2 and the reduced-form coefficient from Section 3.1, compute the Wald estimator by hand. Show your calculation.
@@ -270,15 +270,13 @@ The 2SLS coefficient still remains substantially larger than the OLS coefficient
 # In this context, who are the compliers? Describe them in concrete terms: what type of person’s educational attainment was increased because they happened to grow up near a 4- year college?
 ```
 
-Specifically, the compliers were individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable). This is because proximity to college could lower attendance costs and increase familiarity with the environment, making the difference in the decision to attend and increasing these indivduals' likelihood to be attending a 4-year college and thereby increase their years of education.
+Specifically, the compliers were individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable). This is because proximity to college could lower attendance costs and increase familiarity with the environment, making the difference in the decision to attend and increasing these individuals' likelihood to be attending a 4-year college and thereby increase their years of education.
 
 ```{r}
 #5.2 Write a single careful sentence interpreting the 2SLS coefficient as a LATE. Your sentence should specify:
 #(i) The causal effect being measured
 #(ii) For which specific group of people
-#(iii) What source of variation identifies it
-
-The 2SLS coefficient of 0.125 identifies the local average treatment effect (LATE) of one additional year of schooling on log weekly wages for compliers—those individuals whose years of completed education were increased precisely because they happened to grow up near a 4-year college.
+#(iii) What source of variation identifies it.
 ```
 
 For 2SLS of lwage on educ, all other controls, 2SLS coefficient on educ is 0.124893231.
@@ -291,7 +289,7 @@ The 2SLS coefficient of 0.125 is the LATE (local average treatment effect), mean
 #Think about whether the compliers — men who went to more school because they happened to live near a college — are likely to have higher or lower returns to education than the typical person. Explain your reasoning.
 ```
 
-The LATE is not likely to be the same as the ATE in this sample; in fact, the LATE would likely be higher If compliers were more likely to have more years of education (go to college) just because they live closer to a college, this means they wouldn't have attended college without having that finnacial accessibility. Without further education, these compliers would have less networking, connections, and access to educational growth compared to those attending college.
+The LATE is not likely to be the same as the ATE in this sample; in fact, the LATE would likely be higher If compliers were more likely to have more years of education (go to college) just because they live closer to a college, this means they wouldn't have attended college without having that finnancial accessibility. Without further education, these compliers would have less networking, connections, and access to educational growth compared to those attending college.
 
 The typical person who would've attended college regardless (without having to worry about the financial barrier would already have some pre-determined resources from family/community or pre-existing networks/connections/knowledge contributing to higher wage levels; in other words, the further education wouldn't substantially impact/grow wage level outcomes (less educational return) due to these pre-existing foundations.
 
