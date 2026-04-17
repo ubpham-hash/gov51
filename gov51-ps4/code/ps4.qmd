@@ -119,9 +119,11 @@ The F-statistic is asking if instrument improves the first stage of the 2SLS.
 #(b)Can you think of a way the exclusion restriction might be violated — that is, a reason why growing up near a college might affect your wages for reasons other than more education? Be specific
 ```
 
-To meet the exclusion restriction, there must be no direct relationship between nearc4 and lwage; nearc4 must be uncorrelated with the error term in the 2SLS equation relating lwage to nearc4 and educ (+ any other covariates). The only path for nearc4 to be related to lwage is through nearc4's association with the educ variable. The exclusion restriction is untestable and can only be argued through institutional knowledge.
+\(a\) To meet the exclusion restriction, there must be no direct relationship between nearc4 and lwage; nearc4 must be uncorrelated with the error term in the 2SLS equation relating lwage to nearc4 and educ (+ any other covariates). The only path for nearc4 to be related to lwage is through nearc4's association with the educ variable. The exclusion restriction is untestable and can only be argued through institutional knowledge.
 
-There is a possible way the exclusion restruction could be violated where growing up near a college affects your wages without considering education level. If you grow up near college institution (or possibly amplified depending on elite/private/wealthy institutions), you have access to a lot of students/donors/faculty early on in your life. You can build connections early, talk to guest speakers that go to campus, and have access to highly-access databases for research through students you befriend; in turn, your extensive donors/network/access/connections/resources can lead you to achieving higher wages, regardless if you actually attend the institution and/or pursue further education.
+In summary, nearc4 is the IV, educ is the treatment, and log wage is the outcome. Exclusion restriction states that nearc4 only affects logwage via its relationship with educ. Other possible causal routes from nearc4 to logwage are exclusion-restriction violations and invalidate the instrument (such as nearc4 to other confounders to - logwage).
+
+\(b\) There is a possible way the exclusion restruction could be violated where growing up near a college affects your wages without considering education level. If you grow up near college institution (or possibly amplified depending on elite/private/wealthy institutions), you have access to a lot of students/donors/faculty early on in your life. You can build connections early, talk to guest speakers that go to campus, and have access to highly-access databases for research through students you befriend; in turn, your extensive donors/network/access/connections/resources can lead you to achieving higher wages, regardless if you actually attend the institution and/or pursue further education.
 
 ```{r}
 #2.5 If the instrument is as-good-as-randomly assigned, respondents who grew up near a college should look similar on pre-treatment characteristics to those who did not.
@@ -214,23 +216,53 @@ gof_map = c("nobs", "r.squared"))
 ```{r}
 #4.4 The OLS and 2SLS estimates of the return to education are likely to differ. Answer the following:
 
+# NOTE: The return to education is the percentage increase in weekly wages caused by one additional year of schooling.
+
 #(a) Which is larger — OLS or 2SLS?
 # (b) Card (1995) interprets the finding that 2SLS > OLS as evidence of downward bias in OLS. What could cause OLS to underestimate the return to education? (Hint: think about measurement error in educ, or about who the compliers are.)
 # (c) Which estimate is more credible as a causal estimate of the effect of education on wages? Explain briefly.
 ```
 
-\(a\)
+\(a\) 2SLS estimates the return to education is 0.125. OLS estimates the return to education is 0.071. 2SLS is larger.
 
-\(b\)
+\(b\) OLS could underestimate the return to education because it does not isolate all of he variation in education. The variation education earlier was referred to as endogeneous variables, the outcomes explained by other variables within the data set, including unaccounted for confounding variables/covariates mentioned in 1.5 to hinder the causal effect of education (extensive access to networks through college or individual motivation). The measurement in education is not accounted for by OLS and would bias OLS toward 0 relating the two variables directly).
 
-\(c\)
+The compliers were individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable), and will have higher log weekly wages / return to education, which would lead to an OLS understimation without accounting for/or even using the instrument variable of proximity to college. OLS is averaging across all without making a distinction between those who did not have access to closer proximity (lower average wages compared to those who did have closer proximity, which cannot be reflected due to the lack of the instrumental variable of nearc4).
+
+\(c\) 2SLS Is more credible as a causal estimate of the effect of education on wages.
+
+First of all, 2SLS accounts for the instrumental variable of nearc4 and only estimates for the compliers/those whose education changes based on high proximity to a college. The compliers were individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable), and will have higher log weekly wages / return to education. In return, underestimation is avoided by not averaging across all like was done in OLS, rather a specific set of compliers.
+
+Regarding variation in education (such as extensive access to networks through college or individual motivation), 2SLS accounts only for variation in education caused by instrument/nearc4, which helps limit the underestimation compared to OLS.
 
 ```{r}
 #4.5 The dataset includes IQ scores for a subset of respondents.
 # (a) Run OLS of lwage on educ, IQ, and all other controls. How does including IQ change the OLS coefficient on educ?
+
+ols_iq <- lm_robust(lwage ~ educ + IQ + black + smsa + south + 
+                    exper + expersq + married,
+                    data = card, se_type = "HC2")
+
+ols_iq
+
 # (b) Now run 2SLS including IQ. Does the 2SLS estimate change substantially when IQ is added?
+
+iv_iq <- iv_robust(lwage ~ educ + IQ + black + smsa + south + 
+                   exper + expersq + married |
+                   nearc4 + IQ + black + smsa + south + 
+                   exper + expersq + married,
+                   data = card, se_type = "HC2")
+
+iv_iq
+
 # (c) What does the comparison between part (a) and part (b) suggest about the source of the discrepancy between OLS and IV?
 ```
+
+For OLS of lwage on educ, IQ, and all other controls, OLS coefficient on educ is 0.067568681. Previously, OLS (without IQ score) estimates the return to education is 0.07149827. This means with the IQ score in OLS, the educ coefficient decreases by 0.004.
+
+For 2SLS of lwage on educ, IQ, and all other controls, 2SLS coefficient on educ is 0.1093899302. Previously, 2SLS (without IQ score) estimates the return to education is 0.124893231. This means with the IQ score in OLS, the educ coefficient decreases by 0.015.
+
+The 2SLS coefficient still remains substantially larger than the OLS coefficient on educ. Since the coefficients also remained largely similar after the addition of/controlling for the IQ score variable, this explains that IQ score (similar to an individual's ability/motivation as raised as a concern in 1.5) is not the main contributor to OLS being biased downward.
 
 ```{r}
 #5.1 In a randomized experiment, the ATE averages over everyone. But IV estimates a Local Average Treatment Effect (LATE) — the average effect for compliers: units whose treatment status changes when the instrument changes.
@@ -238,15 +270,29 @@ gof_map = c("nobs", "r.squared"))
 # In this context, who are the compliers? Describe them in concrete terms: what type of person’s educational attainment was increased because they happened to grow up near a 4- year college?
 ```
 
+Specifically, the compliers were individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable). This is because proximity to college could lower attendance costs and increase familiarity with the environment, making the difference in the decision to attend and increasing these indivduals' likelihood to be attending a 4-year college and thereby increase their years of education.
+
 ```{r}
 #5.2 Write a single careful sentence interpreting the 2SLS coefficient as a LATE. Your sentence should specify:
 #(i) The causal effect being measured
 #(ii) For which specific group of people
 #(iii) What source of variation identifies it
+
+The 2SLS coefficient of 0.125 identifies the local average treatment effect (LATE) of one additional year of schooling on log weekly wages for compliers—those individuals whose years of completed education were increased precisely because they happened to grow up near a 4-year college.
 ```
+
+For 2SLS of lwage on educ, all other controls, 2SLS coefficient on educ is 0.124893231.
+
+The 2SLS coefficient of 0.125 is the LATE (local average treatment effect), meaning for each additional year of education the of log weekly wages increased by 12.5% for compliers, individuals who were more likely to increase their years of education (treatment variable) because of their proximity near a 4-year college (instrumental variable, nearc4).
 
 ```{r}
 #5.3 Card finds a 2SLS estimate around 12–13% return to each additional year of education. Is this LATE likely to be the same as the ATE (the return for the average person in the sample)?
 
 #Think about whether the compliers — men who went to more school because they happened to live near a college — are likely to have higher or lower returns to education than the typical person. Explain your reasoning.
 ```
+
+The LATE is not likely to be the same as the ATE in this sample; in fact, the LATE would likely be higher If compliers were more likely to have more years of education (go to college) just because they live closer to a college, this means they wouldn't have attended college without having that finnacial accessibility. Without further education, these compliers would have less networking, connections, and access to educational growth compared to those attending college.
+
+The typical person who would've attended college regardless (without having to worry about the financial barrier would already have some pre-determined resources from family/community or pre-existing networks/connections/knowledge contributing to higher wage levels; in other words, the further education wouldn't substantially impact/grow wage level outcomes (less educational return) due to these pre-existing foundations.
+
+Therefore, there would be a greater average treatment effect as localized the compliers, because there would be a greater effect and growth opportunity available for those who wouldn't have attended college in the workplace; this would have longer term impacts for substantial growth (greater educational return) for their log wage levels, as opposed to those who already had the foundations and further education leads to only slight/moderate growth.
