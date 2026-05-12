@@ -1,0 +1,386 @@
+---
+title: "How has bipartisan voting changed in the United States Congress?"
+subtitle: "Gov 51 Final Paper: A measurement from the 1st Congress to present based on cross-party voting"
+author: "Uy Pham"
+date: "May 11, 2026"
+number-sections: true
+format: 
+  pdf: 
+    code-overflow: wrap
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+# GitHub
+
+GitHub: <https://github.com/ubpham-hash/gov51>
+
+Data was too large for data folder, so per Instructions I made a download script by replacing the local files with the direct download links.
+
+# Introduction
+
+Bipartisanship has long been touted as a value as a hallmark of political collaboration. No matter the party, legislators (and the voters) can still find compromise among the nation’s most partisan issues. Yet, there’s no doubt politics has become increasingly polarized with recent years, with voters often seeing the opposite party as most extreme and oppositional. For some, voting has become an action to oppose a candidate rather than be in favor of a candidate.
+
+One notable area where political polarization can be explored is within the halls of the United States Congress. There’s two major political parties in the United States, and there’s two caucuses in both chambers of Congress. In fact, the leadership structure of Congress is built on a majority party and a minority party. 
+
+The broader question is whether a legislator should be voting based on their party affiliation or the nuances/dynamics of their own views or constituent views. In recent years, we’ve seen increased pressure placed by partisan leadership onto their legislators to fall onto the “party line.” The most recent example is Indiana legislators who were primaried because they did not vote to redraw the state’s congressional districts in favor of Republicans, which went against the interests of President Trump and Republican leadership. Otherwise, if they don’t maintain the line, they’re Democrats/Republicans In Name Only (DINOs/RINOs). 
+
+These days, it seems a “bipartisan vote” counts as long as one member from the opposite party crosses the party line. At the same time, others argue only the most popular, newsworthy legislation appears to be partisan; much like the Supreme Court justices, legislators can routinely agree.
+
+Has pressure in fact increased on legislators to maintain the partyline, and how does this reflect on their voting patterns? How often do politicians cross the party line — and for what issues? Which types of legislators are crossing party lines; what is their ideological rating compared to their party? I analyze this in a descriptive study.
+
+# Data and Measurement
+
+```{r}
+library(dplyr)
+library(glmnet)
+library(ggplot2)
+library(tidyverse)
+library(knitr)
+library(modelsummary)
+library(readr)
+
+# Download directly from Voteview (download script because data is extremely large)
+votes <- read_csv("https://voteview.com/static/data/out/votes/HSall_votes.csv",
+                  show_col_types = FALSE)
+
+members <- read_csv("https://voteview.com/static/data/out/members/HSall_members.csv",
+                    show_col_types = FALSE)
+
+rollcalls <- read_csv("https://voteview.com/static/data/out/rollcalls/HSall_rollcalls.csv",
+                      show_col_types = FALSE)
+```
+
+For this descriptive analysis, I'm utilizing the VoteView data set, which includes the congressional voting records for all legislation since the 1st Congress. The data set also includes ideology ratings (DW-NOMINATE) for each legislator. The dataset has a record of over 113,000 votes and is compiled by archival records from the Senate/House. The key variables are the legislators who voted in favor or against the legislation, the year, the congressional session, the calculated ideological score of the legislator, the type of vote, and the description of the question/bill/issue they are voting on. 
+
+```{r}
+# - Congress, is what congressional session number it is. Every 2 years based on terms of representatives. 
+# - Chamber, Senate or House. 
+#- Roll Number, Number vote for that Congressional session and chamber. 
+# - ICPSR, The ID number coded for a specific legislator. 
+# - Cast_Code, Their vote. Aye is 1 and Nay is 6. 
+# - prob, Probability of predicting the vote.
+```
+
+The first table is votes.csv. The ID code for all votes through Congress and how each representative voted. This database is important to track how each representative voted on a specific legislation and will be connected to both the information of the representative's ideological rating and party affiliation.
+
+```{r}
+# - Congress, is what congressional session number it is. Every 2 years based on terms of representatives. 
+# - Chamber, Senate or House. 
+# - Roll Number, Number vote for that Congressional session and chamber. - Date, The date of the vote. 
+# - session, Session 1 or 2 of that Congressional session. 
+# - clerk_rollnumber, Not within the data set but what the actual congressional record has. 
+# - Yea_count, Number of yes votes; therefore nay_vote, number of no votes. 
+# - nominate_mid_1, the ideological rating point where legislators are equally likely to vote yea or nay 
+# - nominate_mid_2, the equilibrium for yea/nay vote based on ideological rating point that historically captures other political conflicts and matters more in some time periods than others. 
+# - nominate_spread_1, how strongly the vote separates people along ideology dimension 1 
+# - nominate_spread_2, how strongly the vote separates people along ideology dimension 2 
+# - nominate_log_likelihood, A measure of how well the NOMINATE model fits that vote. 
+# - bill_number, the number for the bill/resolution, filed with the Clerk # - vote_result, pass/fail etc. 
+# - vote_desc, the shortened description of the legislation submitted to clerk 
+# - vote_question, the formal parliamentary question being voted on. 
+# - dtl_desc, a longer description
+```
+
+The second table is rollcalls.csv. This stores the DW_nominate for each legislation that was voted upon, as well as the description of the vote. The description will be important to determining the issue being voted upon, which will be combined with the voting record of legislators to determine cross-party voting based on issue.
+
+```{r}
+# - Congress, is what congressional session number it is. Every 2 years based on terms of representatives. 
+# - Chamber, Senate or House. 
+# - ICPSR, The ID number coded for a specific legislator. 
+# - State_ICPSR, The ID number coded for a specific state. 
+# - Distrct_code, The ID number coded for a specific congressional district.
+# - State_abbreviation, abbreviation for that state - party_code, The ID number coded for a specific historical political party. 
+# - occupancy, status of occupying the seat / vacant / special election / resignation.
+# - last_means, technical variable for NOMINATE. 
+# - bioname, The biographical name of the representative. 
+# - bioguide_id, The ID number coded for a specific legislator's congressional biographic page.
+# - born, Birth year 
+# - died, Death year. 
+# - nominate_dim1, liberal–conservative dimension ideological score
+# - nominate_dim2, ideological score based on historically captures secondary political conflicts 
+# - nominate_log_likelihood, likelihood of model fit
+# - nominate_geo_mean_probability, probability that the model correctly predicts the member’s votes.
+# - nominate_number_of_votes, how many rollcall votes were used to estimate the NOMINATE score for that member in that Congress. 
+# - nominate_number_of_errors, how many votes the NOMINATE model “misclassified” for that member. 
+# - conditional, whether the NOMINATE estimate was produced under conditional estimation rules. 
+# - nokken_poole_dim1, Nokken–Poole ideology score (dimension 1) for special cases such as changing parties or non consecutive terms.
+```
+
+The third table is members.csv. This stores the member's unique ID to be translated across the other tables, as well as the ideological rating of the representative according to DW-nominate.
+
+# Definitions
+
+A cross-party vote is defined by when a legislator votes against the majority of their party on a piece of legislation.
+
+Therefore, for a single piece of legislation, I want to count the number of cross-party votes. 
+
+How did this number change between congressional sessions and dependent on the type (issue in concern) of legislation?
+
+# Data Summary
+
+```{r}
+merged <- votes %>%
+  mutate(vote = case_when(
+    cast_code == 1 ~ "yea",
+    cast_code == 6 ~ "nay",
+    TRUE ~ NA_character_
+  )) %>%
+  filter(!is.na(vote)) %>%
+  left_join(
+    members %>% select(congress, icpsr, party_code, nominate_dim1, bioname),
+    by = c("congress", "icpsr")
+  ) %>%
+  left_join(
+    rollcalls %>% select(congress, chamber, rollnumber, session,
+                         vote_desc, vote_question, dtl_desc),
+    by = c("congress", "chamber", "rollnumber")
+  )
+
+party_majority <- merged %>%
+  group_by(congress, chamber, rollnumber, party_code) %>%
+  summarise(
+    pct_yea = mean(vote == "yea"),
+    party_position = ifelse(pct_yea >= 0.5, "yea", "nay"),
+    .groups = "drop"
+  )
+
+merged2 <- merged %>%
+  left_join(party_majority,
+            by = c("congress", "chamber", "rollnumber", "party_code")) %>%
+  mutate(cross_party_vote = ifelse(vote != party_position, 1, 0))
+```
+
+This is how I calculate cross_party vote rate per legislator. I had to merge data across several of the tables/datasets.
+
+First, I joined each legislator's information in members.csv with their recorded vote in votes.csv and the information of the piece of legislation in rollcalls.csv. Therefore, this merged table records each legislator's information, how they voted, and what the legislation was about.
+
+Having this information together then allows to calculate how a party's majority voted on the piece of legislation based on who has that party_ID and their recorded vote on the legislation. This is merged to the table, so that each row, based on the legislation ID will also have a note on how their own party voted (since each row is one legislator's vote.)
+
+Afterward, I add a column that indicates whether the legislator's vote is a cross_party vote. If they voted differently than more than 50% of their party, they have voted cross-party.
+
+The unit of observation is one legislator in one congressional session.
+
+```{r}
+legislator_summary <- merged2 %>%
+  group_by(congress, chamber, icpsr, bioname, party_code, nominate_dim1) %>%
+  summarise(
+    total_votes = n(),
+    cross_party_votes = sum(cross_party_vote, na.rm = TRUE),
+    cross_party_rate = cross_party_votes / total_votes,
+    .groups = "drop"
+  )
+
+datasummary(
+  `Cross-Party Vote Rate` + `DW-NOMINATE Score` ~ (Mean + SD + Min + Max + N),
+  data = legislator_summary %>%
+    select(cross_party_rate, nominate_dim1, congress) %>%
+    rename(
+      `Cross-Party Vote Rate` = cross_party_rate,
+      `DW-NOMINATE Score` = nominate_dim1,
+    )
+)
+```
+
+This shows that the minimum cross-party vote rate is 0%, which makes sense. Some will never cross-the party line, especially if they are in a safe district. Some people are always cross-party voting, possibly independents. The mean cross-party vote is 16%. This is the cross-party vote rate per legislator.
+
+The mean DW_nominate score is 0.01, meaning the average legislators is near the ideological center (0). This is because the scale is -1 to 1 based on liberal to conservative.
+
+Some people have no DW_nominate score in the data set because of short time served or the Earlier Congress. However, what matters is how the majority of their party voted.
+
+The summary_statistics just show the overall information about this data, but the goal of my paper is to understand how DW_nominate and cross-party vote rate are related and by issue.
+
+# Cross-Party Trends (Historical)
+
+```{r}
+crossparty_trend <- merged2 %>%
+  group_by(congress) %>%
+  summarise(
+    avg_crossparty_rate = mean(cross_party_vote, na.rm=TRUE),
+    total_member_votes = n(),
+    .groups="drop"
+  ) %>%
+  arrange(congress)
+
+#| fig-cap: "Average cross-party voting rate per congressional session, 1st Congress to present. A cross-party vote is defined as a legislator voting against the majority position of their own party. The overall declining trend indicates increasing partisan cohesion over time."
+ggplot(crossparty_trend, aes(x = congress, y = avg_crossparty_rate)) +
+  geom_line() +
+  labs(
+    title = "Figure 1. Cross-Party Voting Rate Over Time",
+    x = "Congress",
+    y = "Average Cross-Party Vote Rate"
+  ) +
+  theme_minimal()
+```
+
+## Methods
+
+Cross_party_trend groups roll call votes by the congressional session. Once grouped, it takes the average cross_party vote rate across the entire congressional session. In other words, across all the votes in that Congressional session, how many of the votes cast (by individual's legislators) were cross-party (against that legislator's party majority)?
+
+## Analysis
+
+What this Figure shows is that overall, despite some fluctuations, the rate of cross-party vote within a Congressional session has decreased over time. The cross-party vote rate started out at 30% (almost a third of all votes cast) in the 1st congressional session, peaking at approximately 35% but largely staying constant around 20% until the 90th Congress. The 90th Congress was around the Civil Rights movement, meaning Democrats and Republicans were likely split on a lot of issues from civil rights to President Lyndon Johnson's Great Society. The overall historic trend of decreasing cross-party vote rates through congressional sessions seems to indicate an increase in polarization; some legislators still do vote against their party, but the proportion of cast votes which are against a legislator's party majority position has changed.
+
+# Cross-Party Trends (Issue)
+
+```{r}
+# The keywords to search for in rollcalls.csv.
+rollcalls <- rollcalls %>%
+  mutate(issue_area = case_when(
+    
+    # Healthcare
+    grepl("health|medicare|medicaid|obamacare|hospital|insurance|patients", 
+          dtl_desc, ignore.case = TRUE) ~ "Healthcare",
+    
+    # Immigration
+    grepl("immigration|border|asylum|visa|deport|citizenship", 
+          dtl_desc, ignore.case = TRUE) ~ "Immigration",
+    
+    # Civil Rights / Voting
+    grepl("civil rights|voting rights|discrimination|equal|race|gender|lgbt", 
+          dtl_desc, ignore.case = TRUE) ~ "Civil Rights",
+    
+    # Default
+    TRUE ~ "Other"
+  ))
+
+# Merged the issue code and calculate the cross_party rate across that issue area. 
+merged2 <- merged2 %>%
+  left_join(
+    rollcalls %>% 
+      distinct(congress, chamber, rollnumber, .keep_all = TRUE) %>%
+      select(congress, chamber, rollnumber, issue_area),
+    by = c("congress", "chamber", "rollnumber")
+  )
+
+crossparty_by_issue_time <- merged2 %>%
+  group_by(congress, issue_area) %>%
+  summarise(
+    avg_crossparty_rate = mean(cross_party_vote, na.rm = TRUE),
+    .groups = "drop"
+  )
+# The Plot itself. 
+#| fig-cap: "Average cross-party voting rate by congressional session for three issue areas — Civil Rights, Healthcare, and Immigration — identified through keyword matching of legislation descriptions. All three issue areas show declining cross-party voting rates in recent congressional sessions."
+ggplot(crossparty_by_issue_time %>% filter(issue_area != "Other"),
+       aes(x = congress, y = avg_crossparty_rate, color = issue_area)) +
+  geom_line() +
+  labs(
+    title = "Cross-Party Voting Rate by Issue Area Over Time",
+    x = "Congress",
+    y = "Average Cross-Party Vote Rate",
+    color = "Issue Area"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+## Methods
+
+First, I queried through all the legislation descriptions in rollcalls.csv based on keywords. I tried to list out as many key words I thought could correlate to that policy issue, the three being: civil rights, healthcare, and immigration.
+
+I then joined these description categories within the original merged dataset. Then, I took the average number of cross-party votes (votes cast by individual legislator's) across all votes for legislation with the corresponding category label.
+
+## Analysis
+
+These are three of the mostly hotly contested issues today, so the goal was to see whether these trends replicated over time. Or, alternatively, if there was increased bipartisanship and cross-party voting on the issues on earlier times in the history of the United States Congress.
+
+Civil Rights cross-party voting rate peaks at 40% in the earlier editions of Congress, decline to less than 10% slightly past the 50th Congress, and increases path the 75th Congress before dipping again past the 100th Congress. This matches with the constantly changing parties across the Reconstruction era, with more division during the Civil Rights Movement (especially deep South politicians) and now with more progressive / social reform proposals at legislation.
+
+Healthcare tends to fluctuate (high fluctuation) between 20% and 30% before dipping below 20% a bit before the 100th Congress. This makes sense given the controversies over Obamacare proposed in recent Congressional sessions, with the last concrete agreement being Medicaid and Medicare under President Lyndon Johnson.
+
+Immigration has consistently fluctuated across the course of the United States. This makes sense given the waves of immigration the United States has experienced (European waves, Chinese waves, post World War 2, and recently across our Southern Border).
+
+However, overall, for all three issues, the trends in cross-party voting is currently on a declining trend (as in, the cross-party vote rate for these issue categories is continuing to decrease over the course of recent Congressional sessions. The other category (for all other legislation) has clearly decreased as of recent as well.
+
+A strong limitation should be noted here is that this is solely based on key words analysis of the pre-provided descriptions. Some bills may be miscategorized or excluded.
+
+# Ideological Score vs Cross-Party Vote
+
+```{r}
+member_crossparty <- merged2 %>%
+  group_by(congress, icpsr, bioname, party_code) %>%
+  summarise(
+    nominate_dim1 = first(nominate_dim1),
+    crossparty_rate = mean(cross_party_vote, na.rm=TRUE),
+    n_votes = n(),
+    .groups="drop"
+  ) %>%
+  arrange(desc(crossparty_rate))
+
+member_crossparty <- member_crossparty %>%
+  mutate(nominate_sq = nominate_dim1^2)
+
+model <- lm(crossparty_rate ~ nominate_dim1 + nominate_sq, 
+            data = member_crossparty)
+
+modelsummary(model,
+             coef_rename = c(
+               "nominate_dim1" = "DW-NOMINATE Score",
+               "nominate_sq" = "DW-NOMINATE Score²"
+             ),
+             gof_map = c("nobs", "r.squared"),
+             title = "OLS Regression: Ideology and Cross-Party Voting Rate")
+
+#| fig-cap: "Cross-party voting rate plotted against DW-NOMINATE ideological score for 50,460 legislator-congress observations. The red curve shows the fitted OLS regression line including a squared term, capturing the inverted U-shaped relationship between ideological moderation and cross-party voting rate. Legislators near the ideological center (score = 0) are associated with higher cross-party voting rates than those at either extreme."
+ggplot(member_crossparty, aes(x = nominate_dim1, y = crossparty_rate)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "lm", formula = y ~ x + I(x^2),
+              color = "red", se = TRUE) +
+  labs(
+    title = "Legislator Ideology and Cross-Party Voting",
+    x = "DW-NOMINATE Dimension 1: Ideological Rating",
+    y = "Cross-Party Voting Rate",
+    caption = "Source: Voteview (Lewis et al., 2024)"
+  ) +
+  theme_minimal()
+```
+
+## Methods
+
+As mentioned at the beginning with data sets, each legislators has a DW_nominate score as determined by the data set creators. In other words, where they fall on the liberal to conservative spectrum. The theory would be that more moderate members (from competitive districts, have more moderate views) vote cross-party more often.
+
+In the merged dataset, I already have each legislator’s vote on each piece of legislation, and whether that was cross-party. The number of legislator cross party votes / total party votes ever = cross party vote rate for the legislator.
+
+I graphed their cross-party vote compared to their ideological rating.
+
+For the regression, I ran an OLS regression to relate ideological rating (linear and squared) and cross_party_vote rate. I made sure to include a squared term because I observed the overall parabolic shape as a potential association.
+
+## Analysis 
+
+There’s a moderately-strong parabolic, inverted U-shaped relationship between ideology score and the cross-vote rate of an individual legislator. Though there’s a handful of outliers, those who are toward the center (0 of the ideological scale) are more likely to have a higher cross-party vote rate.
+
+The regression equation is:
+
+cross party vote rate = 0.191 + 0.001 (DW-NOMINATE) + -0.236(DW-NOMINATE)\^2.
+
+For a legislator with a ideological-rating of 0 (meaning right in the middle of the ideological scale), they are predicted to vote with the other party and against their own party's majority 19% of the time.
+
+The linear term coefficient is 0.001, which meanas that a parabolic relationship is quite strong compared to linear. Additionally, based on the squared term, moving from center (0) to fully extreme (1 or -1) predicts a drop of about 24 percentage points in cross-party voting rate. It makes sense that the squared term has a negative coefficient, given the downward-facing shape of the parabola.
+
+This parabolic equation relating ideology and cross-party vote rate alone captures only 7.6% of variation in legislators' cross-party vote. This means this model is not an extremely strong association (not correlation, not predictive) model; however, it's important to take into account this is across many congressional sessions, each legislator has individual values and voting, and, as I will discuss in limitations, the lack of contextual analysis applied to the quantitative.
+
+# Limitations
+
+This descriptive quantitative analysis was insightful to better understand the overall trends facing bipartisanship and the rate of cross-party voting among legislators in Congress. However, this study's major limitation is the lack of context-specific and historical analysis based on the stakes of each piece of legislation.
+
+For one, votes may have different historical contexts. Not all votes are supposed to be divisive. As I mentioned in my introduction, there's a lot of routine legislation to rename post offices or just needed to pass unanimously for the rules, which are still accounted for. Other votes have increased leadership pressure; however, if the leadership of a party wants a certain a vote but the majoirity of their party votes the other way, then the leadership is counted as a cross-party vote. I would revise my methodology to reflect this, but this would require deeper analysis into who the leaders are and the public statement leadership may on certain votes (president and congressional). Or, what if, both party leadership / establishment opposes a measure like congressional-stock trading, but a majority of both caucuses vote against their leadership? I would also consider limiting the breadth of the study into specific historical eras, rather than across fluctuating political climates and changing political parties.
+
+It was interesting to explore parabolic relationships with only two-predictors, as opposed to other models we've run with many more predictors. Other factors I would consider in a future model (not necessarily in this data set) would be years in Congress, donations, leadership status, and congressional district (how safe is their district).
+
+Building upon our discussion of AI in this course, I believe AI might be a useful way to code the issue categories of these legislation. This would account for key words I missed in each issue set, but I would also determine whether a key word reference was truly relating to the issue area.
+
+# Conclusion
+
+To answer my question, bi-partisan voting (as measured by rates of cross-party votes on legislation) in the United States Congress has generally decreased over time.
+
+The first model showed that in the 1st Congress and near the beginning of the United States, the cross-party vote rate began at 30% and fluctuated at 20%. This has only decreased since then.
+
+While the rate of cross-party vote rate for immigration has fluctuated throughout history, the rates for immigration, healthcare, and civil rights (three divisive issues today and throughout history, as mentioned in that section comparing historical events to the changes in trends) have all decreased in recent Congressional sessions.
+
+Lastly, the relationship between DW-nominate/ideological rating and the cross-party voting rate of a legislator shows that mostly legislators near the middle (ideological rating wise); however, this is not a strong association but overall trend. Therefore, I'd be extremely interested in exploring further and accounting for my limitations that I discussed, especially individual and historical context for pieces of legislation and accounting for leadership status. But overall, it shows that those who are more partisan/ideological strong in a particular direction are less likely to vote with other parties. And with more safe congressional districts being created in congressional elections, there will likely be less moderates in competitive districts and, in turn, less cross-party voting rates will continue to decrease.
+
+# Citations
+
+Lewis, Jeffrey B., Keith Poole, Howard Rosenthal, Adam Boche, Aaron Rudkin, and Luke Sonnet (2026). *Voteview: Congressional Roll-Call Votes Database*. https://voteview.com/
